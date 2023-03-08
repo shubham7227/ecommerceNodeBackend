@@ -1,2 +1,3 @@
 # ecommerceNodeBackend
-Backend for a machine learning based ecommerce website
+
+Backend for a machine learning and Blockchain based ecommerce website
