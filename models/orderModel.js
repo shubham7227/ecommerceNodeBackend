@@ -41,7 +41,7 @@ const orderSchema = Schema({
     type: Date,
   },
   status: {
-    ype: String,
+    type: String,
     enum: ["Processing", "Delivered", "Cancelled", "Not Processed"],
     default: "Not Processed",
   },

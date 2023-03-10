@@ -25,7 +25,7 @@ const getBrand = async (req, res) => {
 const getAllBrand = async (req, res) => {
   try {
     const allBrands = await brandModel.find();
-    res.status(200).json({ data: allBrand });
+    res.status(200).json({ data: allBrands });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -49,7 +49,7 @@ const updateBrand = async (req, res) => {
 const deleteBrand = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await brandModel.findByIdAndDelete(id);
+    const data = await productModel.findByIdAndUpdate(id, { active: false });
     res.status(200).json({ data: data });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -24,7 +24,7 @@ const getCategory = async (req, res) => {
 
 const getAllCategory = async (req, res) => {
   try {
-    const allCategorys = await categoryModel.find();
+    const allCategory = await categoryModel.find();
     res.status(200).json({ data: allCategory });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -49,7 +49,7 @@ const updateCategory = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await categoryModel.findByIdAndDelete(id);
+    const data = await productModel.findByIdAndUpdate(id, { active: false });
     res.status(200).json({ data: data });
   } catch (error) {
     res.status(500).json({ message: error.message });

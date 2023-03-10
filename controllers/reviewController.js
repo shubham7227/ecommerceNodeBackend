@@ -40,10 +40,30 @@ const getReview = async (req, res) => {
   }
 };
 
+const getReviewByProduct = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const ReviewData = await reviewModel.find({ ProductID: id });
+    res.status(200).json({ data: ReviewData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getReviewByUser = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const ReviewData = await reviewModel.find({ UserID: id });
+    res.status(200).json({ data: ReviewData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllReviews = async (req, res) => {
   try {
     const allReviews = await reviewModel.find();
-    res.status(200).json({ data: allReview });
+    res.status(200).json({ data: allReviews });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -77,6 +97,8 @@ const deleteReview = async (req, res) => {
 module.exports = {
   addReview,
   getReview,
+  getReviewByProduct,
+  getReviewByUser,
   getAllReviews,
   updateReview,
   deleteReview,

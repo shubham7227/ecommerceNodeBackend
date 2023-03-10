@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const bcrypt = require("bcryptjs");
 const userModel = require("../models/userModel");
+const { generateToken } = require("../middlewares/generateToken");
 
 const signup = async (req, res) => {
   try {
@@ -20,9 +21,9 @@ const signup = async (req, res) => {
     }
 
     const salt = await bcrypt.genSalt();
-    const hashedPassword = bcrypt.hashSync(password, salt, 10);
+    const hashedPassword = await bcrypt.hashSync(password, salt, 10);
 
-    await userModel.create({
+    const data = await userModel.create({
       name,
       email,
       password: hashedPassword,
@@ -33,6 +34,7 @@ const signup = async (req, res) => {
 
     res.status(201).json({
       message: " User Created successfully",
+      data: data,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -44,7 +46,7 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     const user = await userModel.findOne({ email, active: true });
     const validPassword = user
-      ? bcrypt.compare(password, user.password)
+      ? await bcrypt.compare(password, user.password)
       : false;
 
     if (!user || !validPassword) {

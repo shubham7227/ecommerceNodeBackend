@@ -75,7 +75,7 @@ const searchProduct = async (req, res) => {
 const getProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const ProductData = await productModel.findById(id);
+    const ProductData = await productModel.find({ _id: id });
     res.status(200).json({ data: ProductData });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -85,7 +85,7 @@ const getProduct = async (req, res) => {
 const getAllProducts = async (req, res) => {
   try {
     const allProducts = await productModel.find();
-    res.status(200).json({ data: allProduct });
+    res.status(200).json({ data: allProducts });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -109,7 +109,7 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await productModel.findByIdAndDelete(id);
+    const data = await productModel.findByIdAndUpdate(id, { active: false });
     res.status(200).json({ data: data });
   } catch (error) {
     res.status(500).json({ message: error.message });
