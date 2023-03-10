@@ -4,10 +4,12 @@ const Schema = mongoose.Schema;
 const reviewSchema = Schema({
   ProductID: {
     type: String,
+    ref: "Product",
     required: true,
   },
   UserID: {
     type: String,
+    ref: "User",
     required: true,
   },
   Rating: {
@@ -18,21 +20,11 @@ const reviewSchema = Schema({
     type: Date,
     default: Date.now,
   },
-  user: {
-    type: Number,
-  },
-  product_id: {
-    type: Number,
-  },
   reviewerName: {
     type: String,
     required: true,
   },
   reviewText: {
-    type: String,
-    required: true,
-  },
-  summary: {
     type: String,
     required: true,
   },

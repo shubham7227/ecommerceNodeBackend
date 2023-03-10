@@ -9,7 +9,7 @@ const isAuth = (req, res, next) => {
     const token = authorization.slice(7, authorization.length); // Bearer XXXXXX
     jwt.verify(
       token,
-      process.env.JWT_SECRET_KEY || "jwt_secret_key",
+      process.env.JWT_SECRET_KEY || "strong_secret_key",
       (err, decode) => {
         if (err) {
           res.status(403).send({ message: "Invalid Token" });
@@ -31,7 +31,7 @@ const verifyToken = (req, res, next) => {
   if (token) {
     jwt.verify(
       token,
-      process.env.JWT_SECRET_KEY || "jwt_secret_key",
+      process.env.JWT_SECRET_KEY || "strong_secret_key",
       (err, decode) => {
         if (err) {
           res.status(403).send({ message: "Invalid Token" });

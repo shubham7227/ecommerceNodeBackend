@@ -15,14 +15,28 @@ const productSchema = Schema(
       type: String,
       required: true,
     },
-    imageURL: {
-      type: Array,
+    category: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
+    mainCategory: {
+      type: String,
       required: true,
     },
-    imageURLHighRes: {
-      type: Array,
-      required: true,
-    },
+    imageURL: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
+    imageURLHighRes: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
     description: {
       type: String,
       required: true,
@@ -38,6 +52,11 @@ const productSchema = Schema(
     quantity: {
       type: Number,
       required: true,
+    },
+    active: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
   },
   { timestamps: true }
