@@ -8,6 +8,10 @@ const addressSchema = Schema(
       required: true,
       ref: "User",
     },
+    title: {
+      type: String,
+      required: true,
+    },
     street: {
       type: String,
     },

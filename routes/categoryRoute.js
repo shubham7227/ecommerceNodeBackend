@@ -5,6 +5,7 @@ const {
   getAllCategory,
   updateCategory,
   deleteCategory,
+  getFeaturedCategory,
 } = require("../controllers/categoryController");
 
 const router = express.Router();
@@ -13,9 +14,11 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, isAdmin, addCategory);
 
-router.get("/:id", isAuth, getCategory);
+router.get("/", getAllCategory);
 
-router.get("/", isAuth, getAllCategory);
+router.get("/featured", getFeaturedCategory);
+
+router.get("/:id", getCategory);
 
 router.put("/:id", isAuth, isAdmin, updateCategory);
 
