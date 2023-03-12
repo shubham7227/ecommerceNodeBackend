@@ -8,6 +8,8 @@ const {
   getAllProducts,
   updateProduct,
   deleteProduct,
+  getFeaturedProducts,
+  bestSelling,
 } = require("../controllers/productController");
 
 const { isAuth, isAdmin } = require("../middlewares/verifyToken");
@@ -17,6 +19,10 @@ router.post("/add", addProduct);
 router.get("/search", searchProduct);
 
 router.get("/", getAllProducts);
+
+router.get("/featured", getFeaturedProducts);
+
+router.get("/best-selling", bestSelling);
 
 router.get("/:id", getProduct);
 

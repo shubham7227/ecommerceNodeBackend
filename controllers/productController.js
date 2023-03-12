@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const productModel = require("../models/productModel");
+const reviewModel = require("../models/reviewModel");
 const ObjectId = mongoose.Types.ObjectId;
 
 const addProduct = async (req, res) => {
@@ -82,6 +83,117 @@ const getProduct = async (req, res) => {
   }
 };
 
+const getFeaturedProducts = async (req, res) => {
+  try {
+    const ProductData = await productModel.aggregate([
+      {
+        $match: {
+          active: true,
+        },
+      },
+      {
+        $sample: { size: 5 },
+      },
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "ProductID",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$imageURLHighRes",
+          },
+          category: {
+            $first: "$category",
+          },
+          rating: {
+            $avg: "$reviews.Rating",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          brand: 1,
+          price: { $round: ["$price", 2] },
+          MRP: { $round: ["$MRP", 2] },
+          imageUrl: 1,
+          category: 1,
+          rating: { $round: ["$rating", 1] },
+        },
+      },
+    ]);
+    res.status(200).json({ data: ProductData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const bestSelling = async (req, res) => {
+  try {
+    const products = await reviewModel.aggregate([
+      {
+        $group: {
+          _id: "$ProductID",
+          count: { $count: {} },
+          rating: { $avg: "$Rating" },
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productData",
+        },
+      },
+      {
+        $unwind: "$productData",
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$productData.imageURLHighRes",
+          },
+          category: {
+            $first: "$productData.category",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: "$productData._id",
+          title: "$productData.title",
+          brand: "$productData.brand",
+          price: { $round: ["$productData.price", 2] },
+          MRP: { $round: ["$productData.MRP", 2] },
+
+          // price: { $round: ["$productData.price", 2] },
+          // MRP: { $round: ["$productData.MRP", 2] },
+          imageUrl: 1,
+          category: 1,
+          rating: { $round: ["$rating", 1] },
+          count: 1,
+        },
+      },
+    ]);
+    res.status(200).json({ data: products });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllProducts = async (req, res) => {
   try {
     const allProducts = await productModel.find();
@@ -123,4 +235,6 @@ module.exports = {
   getAllProducts,
   updateProduct,
   deleteProduct,
+  getFeaturedProducts,
+  bestSelling,
 };
