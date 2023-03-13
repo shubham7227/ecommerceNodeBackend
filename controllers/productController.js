@@ -38,12 +38,12 @@ const addProduct = async (req, res) => {
 const searchProduct = async (req, res) => {
   try {
     const query = req.query.query;
-    console.log(query);
+    // console.log(query);
 
     const products = await productModel.aggregate([
       {
         $search: {
-          index: "productIndex",
+          index: "searchIndex",
           text: {
             path: "title",
             // path: ["title", "Product"],
@@ -76,7 +76,7 @@ const searchProduct = async (req, res) => {
 const getProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const ProductData = await productModel.find({ _id: id });
+    const ProductData = await productModel.findById(id);
     res.status(200).json({ data: ProductData });
   } catch (error) {
     res.status(500).json({ message: error.message });
