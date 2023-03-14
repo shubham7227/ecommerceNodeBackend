@@ -55,9 +55,9 @@ const searchProduct = async (req, res) => {
           },
         },
       },
-      {
-        $limit: 10,
-      },
+      // {
+      //   $limit: 10,
+      // },
       {
         $project: {
           _id: 0,
@@ -76,8 +76,52 @@ const searchProduct = async (req, res) => {
 const getProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const ProductData = await productModel.findById(id);
-    res.status(200).json({ data: ProductData });
+    const ProductData = await productModel.aggregate([
+      {
+        $match: {
+          _id: id,
+        },
+      },
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "ProductID",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          rating: {
+            $avg: "$reviews.Rating",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          brand: 1,
+          price: { $round: ["$price", 2] },
+          MRP: { $round: ["$MRP", 2] },
+          description: 1,
+          feature: 1,
+          imageURL: 1,
+          imageURLHighRes: 1,
+          mainCategory: 1,
+          category: 1,
+          quantity: 1,
+          rating: { $round: ["$rating", 1] },
+          totalReviews: { $size: "$reviews" },
+        },
+      },
+    ]);
+
+    if (ProductData.length === 0) {
+      res.status(404).json({ message: "No product found" });
+      return;
+    }
+    res.status(200).json({ data: ProductData[0] });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

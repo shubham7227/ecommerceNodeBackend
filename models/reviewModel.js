@@ -16,9 +16,9 @@ const reviewSchema = Schema({
     type: Number,
     required: true,
   },
-  time: {
-    type: Date,
-    default: Date.now,
+  Time: {
+    type: Number,
+    default: () => Math.floor(Date.now() / 1000),
   },
   reviewerName: {
     type: String,
