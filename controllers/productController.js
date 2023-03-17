@@ -37,11 +37,20 @@ const addProduct = async (req, res) => {
 
 const searchProduct = async (req, res) => {
   try {
-    const query = req.query.query;
-    // console.log(query);
+    let { query, order } = req.query;
+    let price = req.query.price;
+    let categories = req.query.categories;
+    let brands = req.query.brands;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 12;
 
-    const products = await productModel.aggregate([
-      {
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const aggregateQuery = [];
+
+    if (query) {
+      aggregateQuery.push({
         $search: {
           index: "searchIndex",
           text: {
@@ -54,20 +63,123 @@ const searchProduct = async (req, res) => {
             },
           },
         },
+      });
+    }
+
+    const matchQuery = {};
+
+    if (categories) {
+      categories = categories.split(",");
+      matchQuery["category"] = { $in: categories };
+    } else {
+      categories = [];
+    }
+
+    if (brands) {
+      brands = brands.split(",");
+      matchQuery["brand"] = { $in: brands };
+    } else {
+      brands = [];
+    }
+    const minMaxQuery = [...aggregateQuery];
+    minMaxQuery.push({ $match: { ...matchQuery } });
+
+    if (price) {
+      price = price.split(",");
+      const minPrice = parseInt(price[0]);
+      const maxPrice = parseInt(price[1]);
+      matchQuery["price"] = { $gte: minPrice, $lte: maxPrice };
+    }
+
+    aggregateQuery.push({ $match: matchQuery });
+
+    const countResults = await productModel.aggregate([
+      ...aggregateQuery,
+      {
+        $count: "count",
       },
-      // {
-      //   $limit: 10,
-      // },
+    ]);
+
+    if (!order) {
+      aggregateQuery.push({ $skip: (page - 1) * limit }, { $limit: limit });
+    }
+
+    aggregateQuery.push(
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "ProductID",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$imageURLHighRes",
+          },
+          category: {
+            $first: "$category",
+          },
+          rating: {
+            $avg: "$reviews.Rating",
+          },
+        },
+      },
       {
         $project: {
-          _id: 0,
+          _id: 1,
           title: 1,
-          score: { $meta: "searchScore" },
+          brand: 1,
+          price: { $round: ["$price", 2] },
+          MRP: { $round: ["$MRP", 2] },
+          imageUrl: 1,
+          category: 1,
+          rating: { $round: ["$rating", 1] },
+          totalReviews: { $size: "$reviews" },
+        },
+      }
+    );
+
+    if (order) {
+      const sortOrder = JSON.parse(order);
+      aggregateQuery.push(
+        {
+          $sort: { ...sortOrder, totalReviews: -1 },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: limit }
+      );
+    }
+
+    const products = await productModel.aggregate([...aggregateQuery]);
+
+    const minmaxPrice = await productModel.aggregate([
+      ...minMaxQuery,
+      {
+        $group: {
+          _id: null,
+          maxPrice: { $max: "$price" },
+          minPrice: { $min: "$price" },
         },
       },
     ]);
 
-    res.status(200).json({ data: products });
+    const minPrice = Math.floor(minmaxPrice[0]?.minPrice || 0);
+    const maxPrice = Math.ceil(minmaxPrice[0]?.maxPrice || 0);
+
+    res.status(200).json({
+      data: products,
+      page,
+      limit,
+      categories,
+      brands,
+      price: price ? price : [minPrice, maxPrice],
+      totalResults: countResults[0]?.count || 0,
+      priceRange: [minPrice, maxPrice],
+      sortOrder: order || JSON.stringify({ rating: -1 }),
+      query,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

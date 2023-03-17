@@ -13,9 +13,9 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, isAdmin, addBrand);
 
-router.get("/:id", isAuth, getBrand);
+router.get("/:id", getBrand);
 
-router.get("/", isAuth, getAllBrand);
+router.get("/", getAllBrand);
 
 router.put("/:id", isAuth, isAdmin, updateBrand);
 

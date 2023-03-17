@@ -77,7 +77,9 @@ const getFeaturedCategory = async (req, res) => {
 
 const getAllCategory = async (req, res) => {
   try {
-    const allCategory = await categoryModel.find();
+    const allCategory = await categoryModel
+      .find({ active: true }, { title: 1 })
+      .limit(10);
     res.status(200).json({ data: allCategory });
   } catch (error) {
     res.status(500).json({ message: error.message });

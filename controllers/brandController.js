@@ -24,7 +24,9 @@ const getBrand = async (req, res) => {
 
 const getAllBrand = async (req, res) => {
   try {
-    const allBrands = await brandModel.find();
+    const allBrands = await brandModel
+      .find({ active: true }, { title: 1 })
+      .limit(10);
     res.status(200).json({ data: allBrands });
   } catch (error) {
     res.status(500).json({ message: error.message });
