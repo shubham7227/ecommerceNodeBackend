@@ -13,9 +13,9 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, addWishlist);
 
-router.get("/:id", isAuth, getWishlist);
+router.get("/user", isAuth, getAllWishlistUser);
 
-router.get("/user/:id", isAuth, getAllWishlistUser);
+router.get("/:id", isAuth, getWishlist);
 
 router.get("/", isAuth, isAdmin, getAllWishlist);
 

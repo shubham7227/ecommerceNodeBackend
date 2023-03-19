@@ -47,8 +47,10 @@ const searchProduct = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
 
+    // To create a dynamic query based on request query fields
     const aggregateQuery = [];
 
+    // If search query is provided
     if (query) {
       aggregateQuery.push({
         $search: {
@@ -66,6 +68,7 @@ const searchProduct = async (req, res) => {
       });
     }
 
+    // Dynamic match filter based on request query
     const matchQuery = {};
 
     if (categories) {
@@ -81,8 +84,21 @@ const searchProduct = async (req, res) => {
     } else {
       brands = [];
     }
-    const minMaxQuery = [...aggregateQuery];
-    minMaxQuery.push({ $match: { ...matchQuery } });
+
+    // Calculate the minimum and maximum price after brand/category and search query filter are applied
+    const minmaxPrice = await productModel.aggregate([
+      ...aggregateQuery,
+      {
+        $group: {
+          _id: null,
+          maxPrice: { $max: "$price" },
+          minPrice: { $min: "$price" },
+        },
+      },
+    ]);
+
+    const minPrice = Math.floor(minmaxPrice[0]?.minPrice || 0);
+    const maxPrice = Math.ceil(minmaxPrice[0]?.maxPrice || 0);
 
     if (price) {
       price = price.split(",");
@@ -93,6 +109,7 @@ const searchProduct = async (req, res) => {
 
     aggregateQuery.push({ $match: matchQuery });
 
+    // Get the total documents that matches all the above filters
     const countResults = await productModel.aggregate([
       ...aggregateQuery,
       {
@@ -100,10 +117,12 @@ const searchProduct = async (req, res) => {
       },
     ]);
 
+    // If sortOrder is not provided then apply the limit early to get a faster result
     if (!order) {
       aggregateQuery.push({ $skip: (page - 1) * limit }, { $limit: limit });
     }
 
+    // Projection and lookup
     aggregateQuery.push(
       {
         $lookup: {
@@ -141,6 +160,7 @@ const searchProduct = async (req, res) => {
       }
     );
 
+    // SOrt order is provided then sort accordingly then limit
     if (order) {
       const sortOrder = JSON.parse(order);
       aggregateQuery.push(
@@ -154,20 +174,6 @@ const searchProduct = async (req, res) => {
 
     const products = await productModel.aggregate([...aggregateQuery]);
 
-    const minmaxPrice = await productModel.aggregate([
-      ...minMaxQuery,
-      {
-        $group: {
-          _id: null,
-          maxPrice: { $max: "$price" },
-          minPrice: { $min: "$price" },
-        },
-      },
-    ]);
-
-    const minPrice = Math.floor(minmaxPrice[0]?.minPrice || 0);
-    const maxPrice = Math.ceil(minmaxPrice[0]?.maxPrice || 0);
-
     res.status(200).json({
       data: products,
       page,
@@ -177,7 +183,7 @@ const searchProduct = async (req, res) => {
       price: price ? price : [minPrice, maxPrice],
       totalResults: countResults[0]?.count || 0,
       priceRange: [minPrice, maxPrice],
-      sortOrder: order || JSON.stringify({ rating: -1 }),
+      sortOrder: order,
       query,
     });
   } catch (error) {
