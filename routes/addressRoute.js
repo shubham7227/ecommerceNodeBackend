@@ -13,9 +13,9 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, addAddress);
 
-router.get("/:id", isAuth, getAddress);
+router.get("/single/:id", isAuth, getAddress);
 
-router.get("/user/:id", isAuth, getAllAddressUser);
+router.get("/user", isAuth, getAllAddressUser);
 
 router.get("/", isAuth, isAdmin, getAllAddress);
 

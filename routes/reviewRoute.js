@@ -17,13 +17,13 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, addReview);
 
-router.get("/:id", getReview);
-
 router.get("/", isAuth, isAdmin, getAllReviews);
 
-router.get("/check/:id", isAuth, checkReview);
+router.get("/byuser", isAuth, getReviewByUser);
 
-router.get("/byuser/:id", getReviewByUser);
+router.get("/single/:id", getReview);
+
+router.get("/check/:id", isAuth, checkReview);
 
 router.get("/byproduct/:id", getReviewByProduct);
 

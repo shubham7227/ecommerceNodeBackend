@@ -136,20 +136,29 @@ const getByToken = async (req, res) => {
 //UPDATE USER
 const update = async (req, res) => {
   try {
-    const { id } = req.user;
-    const { name, email, mobileNumber, role } = req.body;
+    const id = req.user.userId;
+    const { name, mobileNumber } = req.body;
     const user = await userModel.findById(id);
+
+    const checkMobile = await userModel.find({
+      _id: { $ne: id },
+      mobileNumber: mobileNumber,
+    });
+
+    if (checkMobile.length > 0) {
+      res.status(402).json({ message: "Mobile number already used" });
+      return;
+    }
+
     if (user) {
       user.name = name || user.name;
-      user.email = email || user.email;
       user.mobileNumber = mobileNumber || user.mobileNumber;
-      user.role = role || user.role;
     }
     const updatedUser = await user.save();
     res.status(200).json({
       message: "Updated successfully",
       data: {
-        _id: updatedUser._id,
+        id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
         mobileNumber: updatedUser.mobileNumber,
@@ -161,12 +170,48 @@ const update = async (req, res) => {
   }
 };
 
+// UPDATE PASSWORD
+const updatePassword = async (req, res) => {
+  try {
+    const id = req.user.userId;
+    const { oldPassword, newPassword } = req.body;
+    const user = await userModel.findById(id);
+
+    const validPassword = user
+      ? await bcrypt.compare(oldPassword, user.password)
+      : false;
+
+    if (!validPassword) {
+      res.status(400).json({ message: "Incorrect password" });
+      return;
+    }
+    if (oldPassword === newPassword) {
+      res.status(400).json({ message: "New password cannot be same as old" });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hashSync(newPassword, salt, 10);
+
+    if (user) {
+      user.password = hashedPassword;
+    }
+
+    await user.save();
+    res.status(200).json({
+      message: "Updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 //DELETE USER
 const deleteuser = async (req, res) => {
-  const { id } = req.user;
+  const id = req.user.userId;
   try {
     const user = await userModel.findByIdAndUpdate(id, { active: false });
-    res.status(200).json({ message: "User deleted", data: user._id });
+    res.status(200).json({ message: "User Deactivated", data: user._id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -180,5 +225,6 @@ module.exports = {
   showUserByRole,
   getByToken,
   update,
+  updatePassword,
   deleteuser,
 };

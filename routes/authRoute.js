@@ -11,6 +11,7 @@ const {
   getByToken,
   update,
   deleteuser,
+  updatePassword,
 } = require("../controllers/authController");
 
 router.post("/signup", signup);
@@ -25,8 +26,10 @@ router.get("/getByRole/:role", isAuth, isAdmin, showUserByRole);
 
 router.get("/", isAuth, isAdmin, show);
 
-router.put("/:id", isAuth, update);
+router.put("/", isAuth, update);
 
-router.delete("/:id", isAuth, deleteuser);
+router.put("/change-password", isAuth, updatePassword);
+
+router.delete("/", isAuth, deleteuser);
 
 module.exports = router;

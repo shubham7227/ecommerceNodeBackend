@@ -194,9 +194,60 @@ const getRatingByProduct = async (req, res) => {
 
 const getReviewByUser = async (req, res) => {
   try {
-    const id = req.params.id;
-    const ReviewData = await reviewModel.find({ UserID: id });
-    res.status(200).json({ data: ReviewData });
+    const id = req.user.userId;
+
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+
+    const totalCount = await reviewModel
+      .find({
+        UserID: id,
+      })
+      .countDocuments();
+
+    const ReviewData = await reviewModel.aggregate([
+      { $match: { UserID: id } },
+      {
+        $sort: {
+          Time: -1,
+        },
+      },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "ProductID",
+          foreignField: "_id",
+          as: "productData",
+        },
+      },
+      {
+        $unwind: "$productData",
+      },
+      {
+        $project: {
+          title: "$productData.title",
+          ProductID: 1,
+          Rating: 1,
+          reviewText: 1,
+          Time: {
+            $toLong: {
+              $toDate: {
+                $multiply: ["$Time", 1000],
+              },
+            },
+          },
+        },
+      },
+    ]);
+    res
+      .status(200)
+      .json({ data: ReviewData, count: totalCount, page: page, limit });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

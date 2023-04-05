@@ -111,6 +111,7 @@ const getStructuredData = async (products) => {
       title: 1,
       price: 1,
       imageURLHighRes: 1,
+      quantity: 1,
     });
 
     const total = productData.price * product.quantity;
@@ -121,11 +122,22 @@ const getStructuredData = async (products) => {
       title: productData.title,
       price: parseFloat(productData.price).toFixed(2),
       imageUrl: productData.imageURLHighRes[0],
+      stock: productData.quantity,
       quantity: product.quantity,
       total: parseFloat(total).toFixed(2),
     };
     data.push(dataEntry);
   }
+
+  data.sort((a, b) => {
+    if (a.id < b.id) {
+      return -1;
+    }
+    if (a.id > b.id) {
+      return 1;
+    }
+    return 0;
+  });
 
   grandTotal = parseFloat(grandTotal).toFixed(2);
 

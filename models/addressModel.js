@@ -14,6 +14,7 @@ const addressSchema = Schema(
     },
     street: {
       type: String,
+      required: true,
     },
     mobileNumber: {
       type: String,
@@ -34,10 +35,6 @@ const addressSchema = Schema(
     zipCode: {
       type: String,
       required: true,
-    },
-    isDefault: {
-      type: Boolean,
-      default: false,
     },
     active: {
       type: Boolean,
