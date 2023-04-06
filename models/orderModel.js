@@ -7,16 +7,29 @@ const orderSchema = Schema({
     required: true,
     ref: "User",
   },
-  address: {
+  addressId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "Address",
   },
+  paymentMethod: {
+    type: String,
+    required: true,
+  },
+  paymentId: {
+    type: String,
+    required: true,
+  },
+  orderId: {
+    type: String,
+    unique: true,
+  },
   products: [
     {
       id: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         required: true,
+        unique: true,
         ref: "Product",
       },
       quantity: {
@@ -24,6 +37,10 @@ const orderSchema = Schema({
         required: true,
       },
       price: {
+        type: Number,
+        required: true,
+      },
+      subTotal: {
         type: Number,
         required: true,
       },
@@ -45,6 +62,13 @@ const orderSchema = Schema({
     enum: ["Processing", "Delivered", "Cancelled", "Placed"],
     default: "Placed",
   },
+});
+
+orderSchema.pre("save", function (next) {
+  const currentDate = new Date().getTime().toString(36);
+  const random = Math.random().toString(36).substring(2, 4);
+  this.orderId = `Order-${currentDate}${random}`;
+  next();
 });
 
 module.exports = mongoose.model("Order", orderSchema);

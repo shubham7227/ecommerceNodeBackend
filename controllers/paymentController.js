@@ -8,7 +8,6 @@ const createStripeIntent = async (req, res) => {
     const payment = await stripe.paymentIntents.create({
       amount: totalAmount * 100,
       currency: "inr",
-      metadata: { integration_check: "accept_a_payment" },
     });
 
     res.status(200).json({ clientSecret: payment.client_secret });

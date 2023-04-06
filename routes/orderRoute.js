@@ -6,19 +6,22 @@ const {
   updateOrder,
   deleteOrder,
   getAllUserOrder,
+  cancelOrder,
 } = require("../controllers/orderController");
 
 const router = express.Router();
 
 const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
-router.post("/add", isAuth, createOrder);
+router.post("/create", isAuth, createOrder);
 
-router.get("/:id", isAuth, getOrder);
+router.get("/single/:id", isAuth, getOrder);
 
-router.get("/user/:id", isAuth, getAllUserOrder);
+router.get("/user", isAuth, getAllUserOrder);
 
 router.get("/", isAuth, isAdmin, getAllOrder);
+
+router.put("/cancel/:id", isAuth, cancelOrder);
 
 router.put("/:id", isAuth, updateOrder);
 
