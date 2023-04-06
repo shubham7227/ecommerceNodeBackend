@@ -6,6 +6,7 @@ const {
   updateCategory,
   deleteCategory,
   getFeaturedCategory,
+  getFilteredCategory,
 } = require("../controllers/categoryController");
 
 const router = express.Router();
@@ -17,6 +18,8 @@ router.post("/add", isAuth, isAdmin, addCategory);
 router.get("/", getAllCategory);
 
 router.get("/featured", getFeaturedCategory);
+
+router.get("/search", getFilteredCategory);
 
 router.get("/:id", getCategory);
 

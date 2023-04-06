@@ -16,8 +16,54 @@ const addCategory = async (req, res) => {
 const getCategory = async (req, res) => {
   try {
     const id = req.params.id;
-    const CategoryData = await categoryModel.findById(id);
-    res.status(200).json({ data: CategoryData });
+
+    const categoryData = await categoryModel.findById(id);
+
+    const productIds = categoryData.products;
+
+    const productData = await productModel.aggregate([
+      {
+        $match: {
+          _id: { $in: productIds },
+          active: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "ProductID",
+          as: "reviews",
+        },
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$imageURLHighRes",
+          },
+          category: {
+            $first: "$category",
+          },
+          rating: {
+            $avg: "$reviews.Rating",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          brand: 1,
+          price: 1,
+          MRP: 1,
+          imageUrl: 1,
+          category: 1,
+          rating: { $round: ["$rating", 1] },
+        },
+      },
+    ]);
+
+    res.status(200).json({ data: productData, title: categoryData.title });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -75,6 +121,94 @@ const getFeaturedCategory = async (req, res) => {
   }
 };
 
+const getFilteredCategory = async (req, res) => {
+  try {
+    let query = req.query.query;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 20;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const searchQuery = [];
+
+    if (query) {
+      searchQuery.push({
+        $search: {
+          index: "categorysearch",
+          text: {
+            path: "title",
+            query: query,
+            fuzzy: {},
+          },
+        },
+      });
+    }
+
+    const categories = await categoryModel.aggregate([
+      ...searchQuery,
+      {
+        $match: {
+          active: true,
+        },
+      },
+      {
+        $addFields: {
+          product: { $arrayElemAt: ["$products", 0] },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "productData",
+        },
+      },
+      {
+        $unwind: "$productData",
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          imageUrl: { $arrayElemAt: ["$productData.imageURLHighRes", 0] },
+          count: {
+            $cond: {
+              if: { $isArray: "$products" },
+              then: { $size: "$products" },
+              else: "0",
+            },
+          },
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const toSendData = categories[0].data;
+    const totalCategories = categories[0].totalCount[0];
+
+    res.status(200).json({
+      data: toSendData,
+      searchQuery: query,
+      limit,
+      currentPage: page,
+      totalCategories: totalCategories?.total || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllCategory = async (req, res) => {
   try {
     const allCategory = await categoryModel
@@ -118,4 +252,5 @@ module.exports = {
   updateCategory,
   deleteCategory,
   getFeaturedCategory,
+  getFilteredCategory,
 };
