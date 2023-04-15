@@ -4,6 +4,7 @@ const cors = require("cors");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const db = require("./utils/db");
+const blockchain = require("./utils/listenBlockchain");
 require("dotenv").config();
 
 app.use(express());
@@ -32,6 +33,8 @@ app.use(
 );
 
 app.set("trust proxy", 1);
+
+app.use("/contracts", express.static("blockchain/build"));
 
 const addressRouter = require("./routes/addressRoute");
 const authRouter = require("./routes/authRoute");

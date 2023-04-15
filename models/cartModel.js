@@ -12,7 +12,6 @@ const cartSchema = Schema({
       id: {
         type: String,
         required: true,
-        unique: true,
         ref: "Product",
       },
       quantity: {
