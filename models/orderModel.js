@@ -56,6 +56,9 @@ const orderSchema = Schema({
   deliveredDate: {
     type: Date,
   },
+  cancelledDate: {
+    type: Date,
+  },
   status: {
     type: String,
     enum: ["Processing", "Delivered", "Cancelled", "Placed"],
@@ -65,9 +68,13 @@ const orderSchema = Schema({
 
 orderSchema.pre("save", async function (next) {
   const count = await mongoose.model("Order", orderSchema).countDocuments();
-  const newOrderId = (count + 1).toString();
-  this.orderId = "Order" + "-" + newOrderId;
-  next();
+  if (!this.orderId) {
+    const newOrderId = (count + 1).toString();
+    this.orderId = "Order" + "-" + newOrderId;
+    next();
+  } else {
+    next();
+  }
 });
 
 module.exports = mongoose.model("Order", orderSchema);

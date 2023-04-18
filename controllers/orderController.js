@@ -119,6 +119,14 @@ const getOrder = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userData",
+        },
+      },
+      {
         $unwind: "$productData",
       },
       {
@@ -131,6 +139,7 @@ const getOrder = async (req, res) => {
           paymentMethod: 1,
           paymentId: 1,
           deliveredDate: 1,
+          cancelledDate: 1,
           products: {
             id: 1,
             imageUrl: { $first: "$productData.imageURLHighRes" },
@@ -141,6 +150,7 @@ const getOrder = async (req, res) => {
           },
           totalItems: { $sum: 1 },
           address: { $arrayElemAt: ["$address", 0] },
+          user: { $arrayElemAt: ["$userData", 0] },
         },
       },
       {
@@ -156,6 +166,7 @@ const getOrder = async (req, res) => {
           products: { $push: "$products" },
           totalItems: { $sum: "$totalItems" },
           address: { $first: "$address" },
+          user: { $first: "$user" },
         },
       },
       {
@@ -170,6 +181,11 @@ const getOrder = async (req, res) => {
           paymentMethod: 1,
           paymentId: 1,
           deliveredDate: 1,
+          cancelledDate: 1,
+          "user._id": 1,
+          "user.name": 1,
+          "user.email": 1,
+          "user.mobileNumber": 1,
           "address.title": 1,
           "address.street": 1,
           "address.city": 1,
@@ -340,13 +356,40 @@ const getAllOrder = async (req, res) => {
 const updateOrder = async (req, res) => {
   try {
     const id = req.params.id;
-    const { title } = req.body;
-    const toUpdateData = await orderModel.findById(id);
+    const { status } = req.body;
+    console.log(status);
 
-    toUpdateData.title = title || toUpdateData.title;
+    if (!status) {
+      res.status(404).json({ message: "Status is required" });
+      return;
+    }
 
-    await toUpdateData.save();
-    res.status(200).json({ data: toUpdateData });
+    const orderData = await orderModel.findById(id);
+
+    if (status === "Delivered" && orderData.status !== "Processing") {
+      res.status(404).json({
+        message: "Order status must be processing before delivering the order",
+      });
+      return;
+    }
+
+    if (status === "Delivered") {
+      orderData.deliveredDate = new Date().toISOString();
+    }
+    if (status === "Cancelled") {
+      orderData.cancelledDate = new Date().toISOString();
+    }
+
+    orderData.status = status;
+
+    await orderData.save();
+
+    res.status(200).json({
+      status,
+      id,
+      cancelledDate: orderData.cancelledDate,
+      deliveredDate: orderData.deliveredDate,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -356,11 +399,20 @@ const cancelOrder = async (req, res) => {
   try {
     const id = req.params.id;
 
-    await orderModel.findByIdAndUpdate(id, {
-      status: "Cancelled",
-    });
+    const orderData = await orderModel.findById(id);
 
-    res.status(200).json({ status: "Cancelled", id });
+    orderData.cancelledDate = new Date().toISOString();
+    orderData.status = "Cancelled";
+
+    await orderData.save();
+
+    res
+      .status(200)
+      .json({
+        status: "Cancelled",
+        id,
+        cancelledDate: orderData.cancelledDate,
+      });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

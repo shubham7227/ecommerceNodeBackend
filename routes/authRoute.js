@@ -12,6 +12,7 @@ const {
   update,
   deleteuser,
   updatePassword,
+  updateByAdmin,
 } = require("../controllers/authController");
 
 router.post("/signup", signup);
@@ -20,11 +21,13 @@ router.post("/login", login);
 
 router.get("/getByToken", isAuth, getByToken);
 
-router.get("/:id", isAuth, showById);
+router.get("/single/:id", isAuth, showById);
 
 router.get("/getByRole/:role", isAuth, isAdmin, showUserByRole);
 
 router.get("/", isAuth, isAdmin, show);
+
+router.put("/:id", isAuth, isAdmin, updateByAdmin);
 
 router.put("/", isAuth, update);
 

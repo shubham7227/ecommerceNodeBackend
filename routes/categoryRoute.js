@@ -15,7 +15,7 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 
 router.post("/add", isAuth, isAdmin, addCategory);
 
-router.get("/", isAuth, isAdmin, getAllCategory);
+router.get("/", getAllCategory);
 
 router.get("/featured", getFeaturedCategory);
 

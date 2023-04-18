@@ -18,7 +18,7 @@ router.get("/search", getFilteredBrand);
 
 router.get("/:id", getBrand);
 
-router.get("/", isAuth, isAdmin, getAllBrand);
+router.get("/", getAllBrand);
 
 router.put("/:id", isAuth, isAdmin, updateBrand);
 
