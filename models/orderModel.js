@@ -63,10 +63,10 @@ const orderSchema = Schema({
   },
 });
 
-orderSchema.pre("save", function (next) {
-  const currentDate = new Date().getTime().toString(36);
-  const random = Math.random().toString(36).substring(2, 4);
-  this.orderId = `Order-${currentDate}${random}`;
+orderSchema.pre("save", async function (next) {
+  const count = await mongoose.model("Order", orderSchema).countDocuments();
+  const newOrderId = (count + 1).toString();
+  this.orderId = "Order" + "-" + newOrderId;
   next();
 });
 

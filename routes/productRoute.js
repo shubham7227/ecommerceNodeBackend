@@ -18,7 +18,7 @@ router.post("/add", addProduct);
 
 router.get("/search", searchProduct);
 
-router.get("/", getAllProducts);
+router.get("/", isAuth, isAdmin, getAllProducts);
 
 router.get("/featured", getFeaturedProducts);
 

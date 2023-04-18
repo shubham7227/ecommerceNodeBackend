@@ -211,10 +211,94 @@ const getFilteredCategory = async (req, res) => {
 
 const getAllCategory = async (req, res) => {
   try {
-    const allCategory = await categoryModel
-      .find({ active: true }, { title: 1 })
-      .limit(10);
-    res.status(200).json({ data: allCategory });
+    let sortOrder = req.query.sortOrder;
+
+    let searchQuery = req.query.searchQuery;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 10;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const searchQueryAgg = [];
+
+    if (searchQuery) {
+      searchQueryAgg.push({
+        $match: {
+          title: new RegExp(searchQuery, "i"),
+        },
+      });
+    }
+
+    const sortQueryAgg = [];
+    if (sortOrder) {
+      const _sortOrder = JSON.parse(sortOrder);
+      sortQueryAgg.push({
+        $sort: { ..._sortOrder },
+      });
+    }
+
+    const categoriesData = await categoryModel.aggregate([
+      ...searchQueryAgg,
+      {
+        $match: {
+          active: true,
+        },
+      },
+      {
+        $addFields: {
+          product: { $arrayElemAt: ["$products", 0] },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "productData",
+        },
+      },
+      {
+        $unwind: "$productData",
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          imageUrl: { $arrayElemAt: ["$productData.imageURLHighRes", 0] },
+          count: {
+            $cond: {
+              if: { $isArray: "$products" },
+              then: { $size: "$products" },
+              else: "0",
+            },
+          },
+        },
+      },
+      ...sortQueryAgg,
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const allCategoriesData = categoriesData[0].data;
+    const totalCategories = categoriesData[0].totalCount[0];
+
+    res.status(200).json({
+      data: allCategoriesData,
+      totalCategories: totalCategories?.total || 0,
+      currentPage: page,
+      limit: limit,
+      searchQuery: searchQuery,
+      sortOrder: sortOrder,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

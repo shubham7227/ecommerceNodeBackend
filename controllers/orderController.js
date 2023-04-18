@@ -263,8 +263,75 @@ const getAllUserOrder = async (req, res) => {
 
 const getAllOrder = async (req, res) => {
   try {
-    const allOrders = await orderModel.find();
-    res.status(200).json({ data: allOrders });
+    let sortOrder = req.query.sortOrder || JSON.stringify({ orderDate: -1 });
+    const _sortOrder = JSON.parse(sortOrder);
+
+    let orderIdQuery = req.query.orderIdQuery;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 10;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const searchQuery = [];
+
+    if (orderIdQuery) {
+      searchQuery.push({
+        $match: {
+          orderId: new RegExp(orderIdQuery, "i"),
+        },
+      });
+    }
+
+    const orderData = await orderModel.aggregate([
+      ...searchQuery,
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userData",
+        },
+      },
+      {
+        $unwind: "$userData",
+      },
+      {
+        $project: {
+          _id: 1,
+          orderId: 1,
+          userName: "$userData.name",
+          orderDate: 1,
+          totalAmount: 1,
+          status: 1,
+        },
+      },
+      {
+        $sort: { ..._sortOrder },
+      },
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const allOrdersData = orderData[0].data;
+    const totalOrders = orderData[0].totalCount[0];
+
+    res.status(200).json({
+      data: allOrdersData,
+      totalOrders: totalOrders?.total || 0,
+      currentPage: page,
+      limit: limit,
+      orderIdQuery: orderIdQuery,
+      sortOrder: sortOrder,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

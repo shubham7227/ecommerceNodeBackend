@@ -358,8 +358,82 @@ const bestSelling = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const allProducts = await productModel.find();
-    res.status(200).json({ data: allProducts });
+    let sortOrder = req.query.sortOrder;
+
+    let nameQuery = req.query.nameQuery;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 10;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const searchQuery = [];
+
+    if (nameQuery) {
+      searchQuery.push({
+        $match: {
+          title: new RegExp(nameQuery, "i"),
+        },
+      });
+    }
+
+    const sortQueryAgg = [];
+    if (sortOrder) {
+      const _sortOrder = JSON.parse(sortOrder);
+      sortQueryAgg.push({
+        $sort: { ..._sortOrder },
+      });
+    }
+
+    const productsData = await productModel.aggregate([
+      ...searchQuery,
+      {
+        $match: { active: true },
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$imageURLHighRes",
+          },
+          category: {
+            $first: "$category",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          imageUrl: 1,
+          category: 1,
+          brand: 1,
+          quantity: 1,
+          price: 1,
+        },
+      },
+      ...sortQueryAgg,
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const allProductsData = productsData[0].data;
+    const totalProducts = productsData[0].totalCount[0];
+
+    res.status(200).json({
+      data: allProductsData,
+      totalProducts: totalProducts?.total || 0,
+      currentPage: page,
+      limit: limit,
+      nameQuery: nameQuery,
+      sortOrder: sortOrder,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

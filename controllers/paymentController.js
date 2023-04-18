@@ -7,8 +7,11 @@ const createStripeIntent = async (req, res) => {
   try {
     const { totalAmount } = req.body;
 
+    const formattedAmount = parseFloat(
+      (parseFloat(totalAmount) * 100).toFixed(0)
+    );
     const payment = await stripe.paymentIntents.create({
-      amount: totalAmount * 100,
+      amount: formattedAmount,
       currency: "inr",
     });
 

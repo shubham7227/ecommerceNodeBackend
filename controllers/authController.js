@@ -80,8 +80,66 @@ const login = async (req, res) => {
 //SHOW-ALL-USERS
 const show = async (req, res) => {
   try {
-    const user = await userModel.find().select("-password");
-    res.status(200).json({ data: user });
+    let sortOrder = req.query.sortOrder || JSON.stringify({ createdAt: -1 });
+    const _sortOrder = JSON.parse(sortOrder);
+
+    let nameQuery = req.query.nameQuery;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 10;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const searchQuery = [];
+
+    if (nameQuery) {
+      searchQuery.push({
+        $match: {
+          name: new RegExp(nameQuery, "i"),
+        },
+      });
+    }
+
+    const usersData = await userModel.aggregate([
+      ...searchQuery,
+      {
+        $match: { role: "CUSTOMER" },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          mobileNumber: 1,
+          createdAt: 1,
+        },
+      },
+      {
+        $sort: { ..._sortOrder },
+      },
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const allUsersData = usersData[0].data;
+    const totalUsers = usersData[0].totalCount[0];
+
+    res.status(200).json({
+      data: allUsersData,
+      totalUsers: totalUsers?.total || 0,
+      currentPage: page,
+      limit: limit,
+      nameQuery: nameQuery,
+      sortOrder: sortOrder,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
