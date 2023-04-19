@@ -6,6 +6,7 @@ const {
   updateBrand,
   deleteBrand,
   getFilteredBrand,
+  getSearchedBrand,
 } = require("../controllers/brandController");
 
 const router = express.Router();
@@ -15,6 +16,8 @@ const { isAuth, isAdmin } = require("../middlewares/verifyToken");
 router.post("/add", isAuth, isAdmin, addBrand);
 
 router.get("/search", getFilteredBrand);
+
+router.get("/select-search", getSearchedBrand);
 
 router.get("/:id", getBrand);
 

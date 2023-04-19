@@ -13,8 +13,9 @@ const {
 } = require("../controllers/productController");
 
 const { isAuth, isAdmin } = require("../middlewares/verifyToken");
+const { upload } = require("../middlewares/multer");
 
-router.post("/add", addProduct);
+router.post("/add", isAuth, isAdmin, upload.array("images"), addProduct);
 
 router.get("/search", searchProduct);
 
@@ -26,7 +27,7 @@ router.get("/best-selling", bestSelling);
 
 router.get("/:id", getProduct);
 
-router.put("/:id", isAuth, isAdmin, updateProduct);
+router.put("/:id", isAuth, isAdmin, upload.array("images"), updateProduct);
 
 router.delete("/:id", isAuth, isAdmin, deleteProduct);
 

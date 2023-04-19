@@ -1,33 +1,51 @@
 const mongoose = require("mongoose");
 const productModel = require("../models/productModel");
 const reviewModel = require("../models/reviewModel");
+const { cloudinaryUpload } = require("../utils/cloudinary");
+const fs = require("fs");
 const ObjectId = mongoose.Types.ObjectId;
 
 const addProduct = async (req, res) => {
   try {
     const {
       title,
-      Product,
-      feature,
-      imageURL,
-      imageURLHighRes,
-      description,
+      brand,
+      category,
       price,
       MRP,
       quantity,
-      category,
+      feature,
+      description,
     } = req.body;
+
+    const files = req.files;
+
+    if (files.length === 0) {
+      res.status(402).json({ message: "Image is required" });
+      return;
+    }
+
+    const newImageURLs = [];
+
+    for (const file of files) {
+      const { path } = file;
+      const recevData = await cloudinaryUpload(path, "Products");
+      newImageURLs.push(recevData.secure_url);
+      fs.unlinkSync(path);
+    }
+
     const newProduct = await productModel.create({
       title,
-      Product,
-      feature,
-      imageURL,
-      imageURLHighRes,
-      description,
+      brand,
+      category,
       price,
       MRP,
       quantity,
-      category,
+      feature,
+      description,
+      imageURL: newImageURLs,
+      imageURLHighRes: newImageURLs,
+      mainCategory: "Grocery",
     });
     res.status(200).json({ data: newProduct });
   } catch (error) {
@@ -442,13 +460,52 @@ const getAllProducts = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const { title } = req.body;
+    const {
+      title,
+      brand,
+      category,
+      price,
+      MRP,
+      quantity,
+      feature,
+      description,
+      imageURLHighRes,
+    } = req.body;
+    const files = req.files;
+
+    if (
+      files.length === 0 &&
+      (!imageURLHighRes || imageURLHighRes.length === 0)
+    ) {
+      res.status(402).json({ message: "Image is required" });
+      return;
+    }
+
+    const newImageURLs = [];
+
+    for (const file of files) {
+      const { path } = file;
+      const recevData = await cloudinaryUpload(path, "Products");
+      newImageURLs.push(recevData.secure_url);
+      fs.unlinkSync(path);
+    }
+    newImageURLs.push(...imageURLHighRes);
+
     const toUpdateData = await productModel.findById(id);
 
     toUpdateData.title = title || toUpdateData.title;
+    toUpdateData.brand = brand || toUpdateData.brand;
+    toUpdateData.category = category || toUpdateData.category;
+    toUpdateData.price = price || toUpdateData.price;
+    toUpdateData.MRP = MRP || toUpdateData.MRP;
+    toUpdateData.quantity = quantity || toUpdateData.quantity;
+    toUpdateData.feature = feature || toUpdateData.feature;
+    toUpdateData.description = description || toUpdateData.description;
+    toUpdateData.imageURL = newImageURLs || toUpdateData.imageURL;
+    toUpdateData.imageURLHighRes = newImageURLs || toUpdateData.imageURLHighRes;
 
-    await toUpdateData.save();
-    res.status(200).json({ data: toUpdateData });
+    const updatedData = await toUpdateData.save();
+    res.status(200).json({ data: updatedData });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -457,8 +514,8 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await productModel.findByIdAndUpdate(id, { active: false });
-    res.status(200).json({ data: data });
+    await productModel.findByIdAndUpdate(id, { active: false });
+    res.status(200).json({ id: id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

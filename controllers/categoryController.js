@@ -209,6 +209,43 @@ const getFilteredCategory = async (req, res) => {
   }
 };
 
+const getSearchedCategory = async (req, res) => {
+  try {
+    const { searchQuery } = req.query;
+
+    const searchQueryAgg = [];
+
+    if (searchQuery) {
+      searchQueryAgg.push({
+        $match: {
+          title: new RegExp(searchQuery, "i"),
+        },
+      });
+    }
+
+    const categoriesData = await categoryModel.aggregate([
+      ...searchQueryAgg,
+      {
+        $match: {
+          active: true,
+        },
+      },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 0,
+          value: "$title",
+          label: "$title",
+        },
+      },
+    ]);
+
+    res.status(200).json({ data: categoriesData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllCategory = async (req, res) => {
   try {
     let sortOrder = req.query.sortOrder;
@@ -337,4 +374,5 @@ module.exports = {
   deleteCategory,
   getFeaturedCategory,
   getFilteredCategory,
+  getSearchedCategory,
 };

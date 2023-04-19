@@ -7,6 +7,7 @@ const {
   deleteCategory,
   getFeaturedCategory,
   getFilteredCategory,
+  getSearchedCategory,
 } = require("../controllers/categoryController");
 
 const router = express.Router();
@@ -20,6 +21,8 @@ router.get("/", getAllCategory);
 router.get("/featured", getFeaturedCategory);
 
 router.get("/search", getFilteredCategory);
+
+router.get("/select-search", getSearchedCategory);
 
 router.get("/:id", getCategory);
 
