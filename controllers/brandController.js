@@ -2,11 +2,51 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const brandModel = require("../models/brandModel");
 const productModel = require("../models/productModel");
+const { cloudinaryUpload } = require("../utils/cloudinary");
+const fs = require("fs");
 
 const addBrand = async (req, res) => {
   try {
-    const {} = req.body;
-    const newBrand = await brandModel.create({});
+    const { title, products } = req.body;
+
+    const file = req.file;
+
+    if (!title || !file) {
+      res
+        .status(402)
+        .json({ message: "Incomplete data. Title or image missing" });
+      return;
+    }
+
+    const checkDuplicate = await brandModel.findOne({ title });
+
+    if (checkDuplicate) {
+      res.status(402).json({ message: "Brand already exists" });
+      return;
+    }
+
+    let newImageUrl;
+    if (file) {
+      const { path } = file;
+      const recevData = await cloudinaryUpload(path, "Category");
+      newImageUrl = recevData.secure_url;
+      fs.unlinkSync(path);
+    }
+
+    const newBrand = await brandModel.create({
+      title,
+      featuredImage: newImageUrl,
+    });
+
+    const newId = newBrand._id;
+
+    await productModel.updateMany(
+      { _id: { $in: products } },
+      {
+        brandId: newId,
+      }
+    );
+
     res.status(200).json({ data: newBrand });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -69,6 +109,77 @@ const getBrand = async (req, res) => {
   }
 };
 
+const getBrandAdmin = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const brandData = await brandModel.findById(id, {
+      _id: 1,
+      title: 1,
+      featuredImage: 1,
+    });
+
+    res.status(200).json({ data: brandData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getBrandProductsAdmin = async (req, res) => {
+  try {
+    const id = req.params.id;
+    let page = req.query.page || 1;
+    let limit = req.query.limit || 10;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const _productData = await productModel.aggregate([
+      {
+        $match: {
+          brandId: new ObjectId(id),
+          active: true,
+        },
+      },
+      {
+        $addFields: {
+          imageUrl: {
+            $first: "$imageURLHighRes",
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          imageUrl: 1,
+          price: 1,
+          quantity: 1,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          totalCount: [
+            {
+              $count: "total",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const productData = _productData[0].data;
+    const total = _productData[0].totalCount[0];
+
+    res
+      .status(200)
+      .json({ data: productData, page, limit, total: total?.total || 0 });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllBrand = async (req, res) => {
   try {
     let sortOrder = req.query.sortOrder;
@@ -106,33 +217,10 @@ const getAllBrand = async (req, res) => {
         },
       },
       {
-        $addFields: {
-          product: { $arrayElemAt: ["$products", 0] },
-        },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "product",
-          foreignField: "_id",
-          as: "productData",
-        },
-      },
-      {
-        $unwind: "$productData",
-      },
-      {
         $project: {
           _id: 1,
           title: 1,
-          imageUrl: { $arrayElemAt: ["$productData.imageURLHighRes", 0] },
-          count: {
-            $cond: {
-              if: { $isArray: "$products" },
-              then: { $size: "$products" },
-              else: "0",
-            },
-          },
+          featuredImage: 1,
         },
       },
       ...sortQueryAgg,
@@ -196,33 +284,10 @@ const getFilteredBrand = async (req, res) => {
         },
       },
       {
-        $addFields: {
-          product: { $arrayElemAt: ["$products", 0] },
-        },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "product",
-          foreignField: "_id",
-          as: "productData",
-        },
-      },
-      {
-        $unwind: "$productData",
-      },
-      {
         $project: {
           _id: 1,
           title: 1,
-          imageUrl: { $arrayElemAt: ["$productData.imageURLHighRes", 0] },
-          count: {
-            $cond: {
-              if: { $isArray: "$products" },
-              then: { $size: "$products" },
-              else: "0",
-            },
-          },
+          featuredImage: 1,
         },
       },
       {
@@ -277,7 +342,7 @@ const getSearchedBrand = async (req, res) => {
       {
         $project: {
           _id: 0,
-          value: "$title",
+          value: "$_id",
           label: "$title",
         },
       },
@@ -293,12 +358,37 @@ const updateBrand = async (req, res) => {
   try {
     const id = req.params.id;
     const { title } = req.body;
+    const checkDuplicate = await brandModel.findOne({
+      title,
+      _id: { $ne: id },
+    });
+    if (checkDuplicate) {
+      res.status(402).json({ message: "Brand with same title already exists" });
+      return;
+    }
+    const file = req.file;
+
+    let newImageUrl;
+    if (file) {
+      const { path } = file;
+      const recevData = await cloudinaryUpload(path, "Brand");
+      newImageUrl = recevData.secure_url;
+      fs.unlinkSync(path);
+    }
+
     const toUpdateData = await brandModel.findById(id);
 
     toUpdateData.title = title || toUpdateData.title;
+    toUpdateData.featuredImage = newImageUrl || toUpdateData.featuredImage;
 
-    await toUpdateData.save();
-    res.status(200).json({ data: toUpdateData });
+    const updatedData = await toUpdateData.save();
+    res.status(200).json({
+      id,
+      data: {
+        title: updatedData.title,
+        featuredImage: updatedData.featuredImage,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -307,8 +397,19 @@ const updateBrand = async (req, res) => {
 const deleteBrand = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await productModel.findByIdAndUpdate(id, { active: false });
-    res.status(200).json({ data: data });
+    const checkIfProductsExists = await productModel.findOne({
+      brandId: id,
+    });
+
+    if (checkIfProductsExists) {
+      res
+        .status(402)
+        .json({ message: "Cannot delete. Product exists for given brand" });
+      return;
+    }
+
+    await brandModel.findByIdAndDelete(id);
+    res.status(200).json({ id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -317,6 +418,8 @@ const deleteBrand = async (req, res) => {
 module.exports = {
   addBrand,
   getBrand,
+  getBrandAdmin,
+  getBrandProductsAdmin,
   getAllBrand,
   getFilteredBrand,
   getSearchedBrand,

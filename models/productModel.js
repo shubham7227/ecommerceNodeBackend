@@ -11,23 +11,33 @@ const productSchema = Schema(
       type: String,
       required: true,
     },
+    brandId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "Brand",
+    },
     brand: {
       type: String,
-      required: true,
     },
     feature: {
       type: String,
       required: true,
     },
+    categoryId: [
+      {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: "Category",
+      },
+    ],
     category: [
       {
         type: String,
-        required: true,
       },
     ],
     mainCategory: {
       type: String,
-      required: true,
+      default: "Grocery",
     },
     imageURL: [
       {

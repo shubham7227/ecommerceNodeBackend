@@ -8,12 +8,10 @@ const categorySchema = Schema(
       required: true,
       unique: true,
     },
-    products: [
-      {
-        type: String,
-        ref: "Product",
-      },
-    ],
+    featuredImage: {
+      type: String,
+      required: true,
+    },
     active: {
       type: Boolean,
       required: true,

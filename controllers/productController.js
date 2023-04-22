@@ -3,6 +3,8 @@ const productModel = require("../models/productModel");
 const reviewModel = require("../models/reviewModel");
 const { cloudinaryUpload } = require("../utils/cloudinary");
 const fs = require("fs");
+const categoryModel = require("../models/categoryModel");
+const brandModel = require("../models/brandModel");
 const ObjectId = mongoose.Types.ObjectId;
 
 const addProduct = async (req, res) => {
@@ -18,10 +20,20 @@ const addProduct = async (req, res) => {
       description,
     } = req.body;
 
+    const checkDuplicate = await productModel.find({
+      title: title,
+      brandId: brand,
+      active: true,
+    });
+
     const files = req.files;
 
     if (files.length === 0) {
       res.status(402).json({ message: "Image is required" });
+      return;
+    }
+    if (checkDuplicate.length > 0) {
+      res.status(402).json({ message: "Product already exists" });
       return;
     }
 
@@ -36,8 +48,8 @@ const addProduct = async (req, res) => {
 
     const newProduct = await productModel.create({
       title,
-      brand,
-      category,
+      brandId: brand,
+      categoryId: category,
       price,
       MRP,
       quantity,
@@ -45,7 +57,6 @@ const addProduct = async (req, res) => {
       description,
       imageURL: newImageURLs,
       imageURLHighRes: newImageURLs,
-      mainCategory: "Grocery",
     });
     res.status(200).json({ data: newProduct });
   } catch (error) {
@@ -143,6 +154,29 @@ const searchProduct = async (req, res) => {
     // Projection and lookup
     aggregateQuery.push(
       {
+        $addFields: {
+          firstCategory: {
+            $first: "$categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
         $lookup: {
           from: "reviews",
           localField: "_id",
@@ -155,8 +189,11 @@ const searchProduct = async (req, res) => {
           imageUrl: {
             $first: "$imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$category",
+            $first: "$categoryData.title",
           },
           rating: {
             $avg: "$reviews.Rating",
@@ -220,6 +257,40 @@ const getProduct = async (req, res) => {
       },
       {
         $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+          pipeline: [
+            {
+              $project: {
+                _id: 0,
+                label: "$title",
+                value: "$_id",
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "categoryData",
+          pipeline: [
+            {
+              $project: {
+                _id: 0,
+                value: "$_id",
+                label: "$title",
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
           from: "reviews",
           localField: "_id",
           foreignField: "ProductID",
@@ -231,6 +302,9 @@ const getProduct = async (req, res) => {
           rating: {
             $avg: "$reviews.Rating",
           },
+          brand: {
+            $first: "$brandData",
+          },
         },
       },
       {
@@ -238,14 +312,13 @@ const getProduct = async (req, res) => {
           _id: 1,
           title: 1,
           brand: 1,
-          price: { $round: ["$price", 2] },
-          MRP: { $round: ["$MRP", 2] },
+          price: 1,
+          MRP: 1,
           description: 1,
           feature: 1,
           imageURL: 1,
           imageURLHighRes: 1,
-          mainCategory: 1,
-          category: 1,
+          category: "$categoryData",
           quantity: 1,
           rating: { $round: ["$rating", 1] },
           totalReviews: { $size: "$reviews" },
@@ -275,6 +348,29 @@ const getFeaturedProducts = async (req, res) => {
         $sample: { size: 5 },
       },
       {
+        $addFields: {
+          firstCategory: {
+            $first: "$categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
         $lookup: {
           from: "reviews",
           localField: "_id",
@@ -287,8 +383,11 @@ const getFeaturedProducts = async (req, res) => {
           imageUrl: {
             $first: "$imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$category",
+            $first: "$categoryData.title",
           },
           rating: {
             $avg: "$reviews.Rating",
@@ -300,8 +399,8 @@ const getFeaturedProducts = async (req, res) => {
           _id: 1,
           title: 1,
           brand: 1,
-          price: { $round: ["$price", 2] },
-          MRP: { $round: ["$MRP", 2] },
+          price: 1,
+          MRP: 1,
           imageUrl: 1,
           category: 1,
           rating: { $round: ["$rating", 1] },
@@ -343,11 +442,37 @@ const bestSelling = async (req, res) => {
       },
       {
         $addFields: {
+          firstCategory: {
+            $first: "$productData.categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "productData.brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
+        $addFields: {
           imageUrl: {
             $first: "$productData.imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$productData.category",
+            $first: "$categoryData.title",
           },
         },
       },
@@ -369,6 +494,43 @@ const bestSelling = async (req, res) => {
       },
     ]);
     res.status(200).json({ data: products });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getSearchedProducts = async (req, res) => {
+  try {
+    const { searchQuery } = req.query;
+
+    const searchQueryAgg = [];
+
+    if (searchQuery) {
+      searchQueryAgg.push({
+        $match: {
+          title: new RegExp(searchQuery, "i"),
+        },
+      });
+    }
+
+    const productsData = await productModel.aggregate([
+      ...searchQueryAgg,
+      {
+        $match: {
+          active: true,
+        },
+      },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 0,
+          value: "$_id",
+          label: "$title",
+        },
+      },
+    ]);
+
+    res.status(200).json({ data: productsData });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -409,11 +571,37 @@ const getAllProducts = async (req, res) => {
       },
       {
         $addFields: {
+          firstCategory: {
+            $first: "$categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
+        $addFields: {
           imageUrl: {
             $first: "$imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$category",
+            $first: "$categoryData.title",
           },
         },
       },
@@ -494,8 +682,8 @@ const updateProduct = async (req, res) => {
     const toUpdateData = await productModel.findById(id);
 
     toUpdateData.title = title || toUpdateData.title;
-    toUpdateData.brand = brand || toUpdateData.brand;
-    toUpdateData.category = category || toUpdateData.category;
+    toUpdateData.brandId = brand || toUpdateData.brandId;
+    toUpdateData.categoryId = category || toUpdateData.categoryId;
     toUpdateData.price = price || toUpdateData.price;
     toUpdateData.MRP = MRP || toUpdateData.MRP;
     toUpdateData.quantity = quantity || toUpdateData.quantity;
@@ -505,7 +693,31 @@ const updateProduct = async (req, res) => {
     toUpdateData.imageURLHighRes = newImageURLs || toUpdateData.imageURLHighRes;
 
     const updatedData = await toUpdateData.save();
-    res.status(200).json({ data: updatedData });
+
+    const categoryData = await categoryModel.find(
+      { _id: { $in: category } },
+      { _id: 1, title: 1 }
+    );
+    const brandData = await brandModel.findById(brand, { _id: 1, title: 1 });
+
+    const _category = categoryData.map((entry) => ({
+      value: entry._id,
+      label: entry.title,
+    }));
+    const _brand = { value: brandData._id, label: brandData.title };
+
+    const newData = {
+      title: updatedData.title,
+      brand: _brand,
+      category: _category,
+      price: updatedData.price,
+      MRP: updatedData.MRP,
+      quantity: updatedData.quantity,
+      feature: updatedData.feature,
+      description: updatedData.description,
+      imageURLHighRes: updatedData.imageURLHighRes,
+    };
+    res.status(200).json({ data: newData });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -525,6 +737,7 @@ module.exports = {
   addProduct,
   searchProduct,
   getProduct,
+  getSearchedProducts,
   getAllProducts,
   updateProduct,
   deleteProduct,
