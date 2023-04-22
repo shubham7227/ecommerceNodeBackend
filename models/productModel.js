@@ -16,9 +16,6 @@ const productSchema = Schema(
       required: true,
       ref: "Brand",
     },
-    brand: {
-      type: String,
-    },
     feature: {
       type: String,
       required: true,
@@ -30,15 +27,6 @@ const productSchema = Schema(
         ref: "Category",
       },
     ],
-    category: [
-      {
-        type: String,
-      },
-    ],
-    mainCategory: {
-      type: String,
-      default: "Grocery",
-    },
     imageURL: [
       {
         type: String,

@@ -483,9 +483,6 @@ const bestSelling = async (req, res) => {
           brand: "$productData.brand",
           price: { $round: ["$productData.price", 2] },
           MRP: { $round: ["$productData.MRP", 2] },
-
-          // price: { $round: ["$productData.price", 2] },
-          // MRP: { $round: ["$productData.MRP", 2] },
           imageUrl: 1,
           category: 1,
           rating: { $round: ["$rating", 1] },

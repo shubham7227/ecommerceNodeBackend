@@ -28,7 +28,7 @@ const addBrand = async (req, res) => {
     let newImageUrl;
     if (file) {
       const { path } = file;
-      const recevData = await cloudinaryUpload(path, "Category");
+      const recevData = await cloudinaryUpload(path, "Brand");
       newImageUrl = recevData.secure_url;
       fs.unlinkSync(path);
     }
@@ -69,6 +69,29 @@ const getBrand = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          firstCategory: {
+            $first: "$categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
         $lookup: {
           from: "reviews",
           localField: "_id",
@@ -81,8 +104,11 @@ const getBrand = async (req, res) => {
           imageUrl: {
             $first: "$imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$category",
+            $first: "$categoryData.title",
           },
           rating: {
             $avg: "$reviews.Rating",
@@ -138,7 +164,6 @@ const getBrandProductsAdmin = async (req, res) => {
       {
         $match: {
           brandId: new ObjectId(id),
-          active: true,
         },
       },
       {
@@ -212,11 +237,6 @@ const getAllBrand = async (req, res) => {
     const brandsData = await brandModel.aggregate([
       ...searchQueryAgg,
       {
-        $match: {
-          active: true,
-        },
-      },
-      {
         $project: {
           _id: 1,
           title: 1,
@@ -279,11 +299,6 @@ const getFilteredBrand = async (req, res) => {
     const brands = await brandModel.aggregate([
       ...searchQuery,
       {
-        $match: {
-          active: true,
-        },
-      },
-      {
         $project: {
           _id: 1,
           title: 1,
@@ -331,13 +346,8 @@ const getSearchedBrand = async (req, res) => {
       });
     }
 
-    const categoriesData = await brandModel.aggregate([
+    const brandData = await brandModel.aggregate([
       ...searchQueryAgg,
-      {
-        $match: {
-          active: true,
-        },
-      },
       { $limit: 10 },
       {
         $project: {
@@ -348,7 +358,7 @@ const getSearchedBrand = async (req, res) => {
       },
     ]);
 
-    res.status(200).json({ data: categoriesData });
+    res.status(200).json({ data: brandData });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -399,6 +409,7 @@ const deleteBrand = async (req, res) => {
     const id = req.params.id;
     const checkIfProductsExists = await productModel.findOne({
       brandId: id,
+      active: true,
     });
 
     if (checkIfProductsExists) {

@@ -68,6 +68,29 @@ const getCategory = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          firstCategory: {
+            $first: "$categoryId",
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brandId",
+          foreignField: "_id",
+          as: "brandData",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "firstCategory",
+          foreignField: "_id",
+          as: "categoryData",
+        },
+      },
+      {
         $lookup: {
           from: "reviews",
           localField: "_id",
@@ -80,8 +103,11 @@ const getCategory = async (req, res) => {
           imageUrl: {
             $first: "$imageURLHighRes",
           },
+          brand: {
+            $first: "$brandData.title",
+          },
           category: {
-            $first: "$category",
+            $first: "$categoryData.title",
           },
           rating: {
             $avg: "$reviews.Rating",
@@ -183,11 +209,6 @@ const getFeaturedCategory = async (req, res) => {
   try {
     const categories = await categoryModel.aggregate([
       {
-        $match: {
-          active: true,
-        },
-      },
-      {
         $project: {
           _id: 1,
           title: 1,
@@ -231,11 +252,6 @@ const getFilteredCategory = async (req, res) => {
 
     const categories = await categoryModel.aggregate([
       ...searchQuery,
-      {
-        $match: {
-          active: true,
-        },
-      },
       {
         $project: {
           _id: 1,
@@ -286,11 +302,6 @@ const getSearchedCategory = async (req, res) => {
 
     const categoriesData = await categoryModel.aggregate([
       ...searchQueryAgg,
-      {
-        $match: {
-          active: true,
-        },
-      },
       { $limit: 10 },
       {
         $project: {
@@ -338,11 +349,6 @@ const getAllCategory = async (req, res) => {
 
     const categoriesData = await categoryModel.aggregate([
       ...searchQueryAgg,
-      {
-        $match: {
-          active: true,
-        },
-      },
       {
         $project: {
           _id: 1,
@@ -429,6 +435,7 @@ const deleteCategory = async (req, res) => {
 
     const checkIfProductsExists = await productModel.findOne({
       categoryId: id,
+      active: true,
     });
 
     if (checkIfProductsExists) {
