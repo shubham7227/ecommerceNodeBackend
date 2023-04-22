@@ -59,12 +59,10 @@ const getBrand = async (req, res) => {
 
     const brandData = await brandModel.findById(id);
 
-    const productIds = brandData.products;
-
     const productData = await productModel.aggregate([
       {
         $match: {
-          _id: { $in: productIds },
+          brandId: new ObjectId(id),
           active: true,
         },
       },

@@ -27,6 +27,11 @@ const userSchema = new mongoose.Schema(
       enum: ["ADMIN", "CUSTOMER"],
       default: "CUSTOMER",
     },
+    provider: {
+      type: String,
+      enum: ["Google", "Email"],
+      default: "Email",
+    },
     isVerified: {
       type: Boolean,
       required: true,

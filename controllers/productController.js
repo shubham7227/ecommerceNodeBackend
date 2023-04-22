@@ -98,18 +98,52 @@ const searchProduct = async (req, res) => {
     }
 
     // Dynamic match filter based on request query
-    const matchQuery = {};
+    const matchQuery = { active: true };
 
     if (categories) {
-      categories = categories.split(",");
-      matchQuery["category"] = { $in: categories };
+      const objectIdconvertedCategories = new ObjectId(categories);
+      matchQuery["categoryId"] = objectIdconvertedCategories;
+      const categoriesData = await categoryModel.aggregate([
+        {
+          $match: {
+            _id: objectIdconvertedCategories,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            value: "$_id",
+            label: "$title",
+          },
+        },
+      ]);
+
+      categories = categoriesData[0];
     } else {
-      categories = [];
+      categories = null;
     }
 
     if (brands) {
-      brands = brands.split(",");
-      matchQuery["brand"] = { $in: brands };
+      const _brands = brands.split(",");
+      const objectIdconvertedBrands = _brands.map(
+        (entry) => new ObjectId(entry)
+      );
+      matchQuery["brandId"] = { $in: objectIdconvertedBrands };
+
+      brands = await brandModel.aggregate([
+        {
+          $match: {
+            _id: { $in: objectIdconvertedBrands },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            value: "$_id",
+            label: "$title",
+          },
+        },
+      ]);
     } else {
       brands = [];
     }
@@ -133,6 +167,7 @@ const searchProduct = async (req, res) => {
       price = price.split(",");
       const minPrice = parseInt(price[0]);
       const maxPrice = parseInt(price[1]);
+      price = [minPrice, maxPrice];
       matchQuery["price"] = { $gte: minPrice, $lte: maxPrice };
     }
 
@@ -416,6 +451,9 @@ const getFeaturedProducts = async (req, res) => {
 const bestSelling = async (req, res) => {
   try {
     const products = await reviewModel.aggregate([
+      {
+        $match: { active: true },
+      },
       {
         $group: {
           _id: "$ProductID",

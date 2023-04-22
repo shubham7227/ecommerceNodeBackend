@@ -58,12 +58,10 @@ const getCategory = async (req, res) => {
 
     const categoryData = await categoryModel.findById(id);
 
-    const productIds = categoryData.products;
-
     const productData = await productModel.aggregate([
       {
         $match: {
-          _id: { $in: productIds },
+          categoryId: new ObjectId(id),
           active: true,
         },
       },
