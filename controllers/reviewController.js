@@ -5,16 +5,20 @@ const ObjectId = mongoose.Types.ObjectId;
 
 const addReview = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user.userId;
     const { id, rating, reviewText } = req.body;
     if (!id || !rating || !reviewText) {
       res.status(404).json({ message: "Missing data" });
+      return;
     }
 
-    const userDetials = await userModel.findById(userId, { name: 1 });
-    const reviewerName = userDetials.name;
+    const userDetails = await userModel.findById(userId, { name: 1 });
+    const reviewerName = userDetails.name;
 
-    const checkDuplicate = await userModel.findOne({ userID: userId });
+    const checkDuplicate = await reviewModel.findOne({
+      ProductID: id,
+      UserID: userId,
+    });
 
     if (checkDuplicate) {
       res.status(402).json({ messsage: "Review already exists" });
@@ -264,11 +268,23 @@ const getAllReviews = async (req, res) => {
 
 const updateReview = async (req, res) => {
   try {
-    const id = req.params.id;
-    const { title } = req.body;
-    const toUpdateData = await reviewModel.findById(id);
+    const userId = req.user.userId;
+    const reviewId = req.params.id;
+    const { rating, reviewText } = req.body;
 
-    toUpdateData.title = title || toUpdateData.title;
+    const userDetails = await userModel.findById(userId, { name: 1 });
+    const reviewerName = userDetails.name;
+
+    const toUpdateData = await reviewModel.findById(reviewId);
+
+    if (!toUpdateData) {
+      res.status(404).json({ message: "Review not found" });
+      return;
+    }
+
+    toUpdateData.Rating = rating || toUpdateData.Rating;
+    toUpdateData.reviewerName = reviewerName || toUpdateData.reviewerName;
+    toUpdateData.reviewText = reviewText || toUpdateData.reviewText;
 
     await toUpdateData.save();
     res.status(200).json({ data: toUpdateData });

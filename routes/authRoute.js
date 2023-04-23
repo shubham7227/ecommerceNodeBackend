@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { isAuth, isAdmin } = require("../middlewares/verifyToken");
+const { isAuth, isAdmin, verifyToken } = require("../middlewares/verifyToken");
 const {
   signup,
   login,
@@ -13,11 +13,16 @@ const {
   deleteuser,
   updatePassword,
   updateByAdmin,
+  verifyEmail,
+  setPassword,
+  forgotPassword,
 } = require("../controllers/authController");
 
 router.post("/signup", signup);
 
 router.post("/login", login);
+
+router.post("/password/forgot", forgotPassword);
 
 router.get("/getByToken", isAuth, getByToken);
 
@@ -32,6 +37,10 @@ router.put("/:id", isAuth, isAdmin, updateByAdmin);
 router.put("/", isAuth, update);
 
 router.put("/change-password", isAuth, updatePassword);
+
+router.put("/verify/:token", verifyToken, verifyEmail);
+
+router.put("/password/reset/:token", verifyToken, setPassword);
 
 router.delete("/", isAuth, deleteuser);
 

@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema(
     },
     mobileNumber: {
       type: String,
-      unique: true,
     },
     role: {
       type: String,

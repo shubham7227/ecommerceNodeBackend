@@ -30,16 +30,6 @@ const addWishlist = async (req, res) => {
   }
 };
 
-const getWishlist = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const WishlistData = await wishlistModel.findById(id);
-    res.status(200).json({ data: WishlistData });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 const getAllWishlistUser = async (req, res) => {
   try {
     const { userId } = req.user;
@@ -85,30 +75,6 @@ const getAllWishlistUser = async (req, res) => {
   }
 };
 
-const getAllWishlist = async (req, res) => {
-  try {
-    const allWishlist = await wishlistModel.find();
-    res.status(200).json({ data: allWishlist });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const updateWishlist = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const { title } = req.body;
-    const toUpdateData = await wishlistModel.findById(id);
-
-    toUpdateData.title = title || toUpdateData.title;
-
-    await toUpdateData.save();
-    res.status(200).json({ data: toUpdateData });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 const deleteWishlist = async (req, res) => {
   try {
     const id = req.params.id;
@@ -121,9 +87,6 @@ const deleteWishlist = async (req, res) => {
 
 module.exports = {
   addWishlist,
-  getWishlist,
   getAllWishlistUser,
-  getAllWishlist,
-  updateWishlist,
   deleteWishlist,
 };

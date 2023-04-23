@@ -452,9 +452,6 @@ const bestSelling = async (req, res) => {
   try {
     const products = await reviewModel.aggregate([
       {
-        $match: { active: true },
-      },
-      {
         $group: {
           _id: "$ProductID",
           count: { $count: {} },

@@ -3,9 +3,12 @@ const app = express();
 const cors = require("cors");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
+const passport = require("passport");
+require("dotenv").config();
+
 const db = require("./utils/db");
 const blockchain = require("./utils/listenBlockchain");
-require("dotenv").config();
+const passportSetup = require("./utils/passport");
 
 app.use(express());
 app.use(express.json());
@@ -23,17 +26,19 @@ app.use(
     secret: "secret",
     resave: false,
     saveUninitialized: true,
-    cookie: {
-      secure: true,
-      httpOnly: true,
-      sameSite: "none",
-      maxAge: 60 * 60 * 24 * 1000,
-    },
+    // cookie: {
+    //   secure: true,
+    //   httpOnly: true,
+    //   sameSite: "none",
+    //   maxAge: 60 * 60 * 24 * 1000,
+    // },
   })
 );
 
 app.set("trust proxy", 1);
 
+app.use(passport.initialize());
+app.use(passport.session());
 app.use("/contracts", express.static("blockchain/build"));
 
 const addressRouter = require("./routes/addressRoute");
@@ -41,6 +46,7 @@ const authRouter = require("./routes/authRoute");
 const brandRouter = require("./routes/brandRoute");
 const cartRouter = require("./routes/cartRoute");
 const categoryRouter = require("./routes/categoryRoute");
+const googleAuthRouter = require("./routes/googleAuthRoute");
 const orderRouter = require("./routes/orderRoute");
 const paymentRouter = require("./routes/paymentRoute");
 const productRouter = require("./routes/productRoute");
@@ -52,6 +58,7 @@ app.use("/auth", authRouter);
 app.use("/brand", brandRouter);
 app.use("/cart", cartRouter);
 app.use("/category", categoryRouter);
+app.use("/google", googleAuthRouter);
 app.use("/order", orderRouter);
 app.use("/payment", paymentRouter);
 app.use("/product", productRouter);

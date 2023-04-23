@@ -3,10 +3,17 @@ const ObjectId = mongoose.Types.ObjectId;
 const bcrypt = require("bcryptjs");
 const userModel = require("../models/userModel");
 const { generateToken } = require("../middlewares/generateToken");
+const sendMail = require("../utils/sendGrid");
+const { getNewuserId } = require("../utils/userIdhandler");
 
 const signup = async (req, res) => {
   try {
     const { name, email, password, mobileNumber, role } = req.body;
+
+    if (!name || !email || !password) {
+      res.status(400).json({ message: "Incomplete Data!" });
+      return;
+    }
 
     const user = await userModel.findOne({ email });
     if (user) {
@@ -14,27 +21,45 @@ const signup = async (req, res) => {
       return;
     }
 
-    const number = await userModel.findOne({ mobileNumber });
-    if (number) {
-      res.status(400).json({ message: "Mobile number is already in use!" });
-      return;
+    if (mobileNumber) {
+      const number = await userModel.findOne({ mobileNumber });
+      if (number) {
+        res.status(400).json({ message: "Mobile number is already in use!" });
+        return;
+      }
     }
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hashSync(password, salt, 10);
 
+    const userId = getNewuserId().userId;
     const data = await userModel.create({
+      _id: userId,
       name,
       email,
       password: hashedPassword,
       mobileNumber,
       role,
-      isVerified: true,
+    });
+
+    const verifyToken = generateToken({ userId: data._id, role: data.role });
+    const clientUrl = `${process.env.CLIENT_URL}/verify?token=${verifyToken}`;
+    const mailMessage = `
+                          <div>
+                            <p>Please click <a href=${clientUrl}>here</a> to confirm your email.</p>
+                            <p>If the link is not accessible then copy the following link</p>
+                            <p>${clientUrl}</p>
+                          </div>
+                        `;
+
+    await sendMail({
+      email: data.email,
+      subject: "Welcome to growcomers! Confirm your email",
+      content: mailMessage,
     });
 
     res.status(201).json({
-      message: " User Created successfully",
-      data: data,
+      message: "User Created successfully",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -45,6 +70,12 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await userModel.findOne({ email, active: true });
+
+    if (!user.password) {
+      res.status(400).json({ message: "Please login using google" });
+      return;
+    }
+
     const validPassword = user
       ? await bcrypt.compare(password, user.password)
       : false;
@@ -69,6 +100,7 @@ const login = async (req, res) => {
         role: user.role,
         id: user._id,
         mobileNumber: user.mobileNumber,
+        provider: user.provider,
       },
       accessToken,
     });
@@ -491,6 +523,97 @@ const deleteuser = async (req, res) => {
   }
 };
 
+//FORGET PASSWORD
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "No user found with given email" });
+    }
+    const resetToken = generateToken({ userId: user._id, role: user.role });
+
+    const clientUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    const mailMessage = `
+                          <div>
+                            <p>Please click <a href=${clientUrl}>here</a> to reset your password.</p>
+                            <p>If the link is not accessible then copy the following link</p>
+                            <p>${clientUrl}</p>
+                          </div>
+                        `;
+
+    await sendMail({
+      email: user.email,
+      subject: "Growcomers! Reset Password",
+      content: mailMessage,
+    });
+
+    res.status(200).json({
+      message: "Email sent sucessfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+//SET PASSWORD
+const setPassword = async (req, res, next) => {
+  const id = req.user.userId;
+  const { password } = req.body;
+
+  const user = await userModel.findById(id);
+  if (!user) {
+    return res.status(400).json({ message: "Invalid Credentials" });
+  }
+
+  const salt = await bcrypt.genSalt();
+  const hashedPassword = await bcrypt.hashSync(password, salt, 10);
+
+  user.password = hashedPassword;
+  await user.save();
+
+  res.status(200).json({
+    message: "Password reset successfully",
+  });
+};
+
+const verifyEmail = async (req, res) => {
+  try {
+    const id = req.user.userId;
+
+    const user = await userModel.findById(id);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid Credentials" });
+    }
+
+    user.isVerified = true;
+    const userData = await user.save();
+
+    const accessToken = generateToken({
+      userId: userData._id,
+      role: userData.role,
+    });
+
+    res.status(200).json({
+      data: {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        id: userData._id,
+        mobileNumber: userData.mobileNumber,
+        provider: userData.provider,
+      },
+      accessToken,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -502,4 +625,7 @@ module.exports = {
   updateByAdmin,
   updatePassword,
   deleteuser,
+  verifyEmail,
+  forgotPassword,
+  setPassword,
 };
