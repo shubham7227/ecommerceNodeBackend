@@ -9,14 +9,13 @@ const sendMail = async ({ email, subject, content }) => {
     subject,
     html: content,
   };
-  return sgMail
-    .send(msg)
-    .then(() => {
-      console.log("Email sent");
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+  try {
+    await sgMail.send(msg);
+    return;
+  } catch (error) {
+    console.log(error);
+    return;
+  }
 };
 
 module.exports = sendMail;

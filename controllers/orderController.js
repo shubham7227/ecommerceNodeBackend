@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
+const InvoiceDocument = require("pdfkit");
 const orderModel = require("../models/orderModel");
 const cartModel = require("../models/cartModel");
 const productModel = require("../models/productModel");
+const { createInvoice } = require("../utils/createInvoice");
 const ObjectId = mongoose.Types.ObjectId;
 
 const createOrder = async (req, res) => {
@@ -353,6 +355,108 @@ const getAllOrder = async (req, res) => {
   }
 };
 
+const generateInvoice = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const orderData = await orderModel.aggregate([
+      {
+        $match: {
+          _id: new ObjectId(id),
+        },
+      },
+      {
+        $unwind: "$products",
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.id",
+          foreignField: "_id",
+          as: "productData",
+        },
+      },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "addressId",
+          foreignField: "_id",
+          as: "address",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userData",
+        },
+      },
+      {
+        $unwind: "$productData",
+      },
+      {
+        $project: {
+          _id: 1,
+          orderId: 1,
+          orderDate: 1,
+          totalAmount: 1,
+          products: {
+            title: "$productData.title",
+            price: 1,
+            quantity: 1,
+            subTotal: 1,
+          },
+          address: { $arrayElemAt: ["$address", 0] },
+          user: { $arrayElemAt: ["$userData", 0] },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          orderId: { $first: "$orderId" },
+          orderDate: { $first: "$orderDate" },
+          totalAmount: { $first: "$totalAmount" },
+          products: { $push: "$products" },
+          address: { $first: "$address" },
+          user: { $first: "$user" },
+        },
+      },
+      {
+        $project: {
+          orderId: 1,
+          orderDate: 1,
+          totalAmount: 1,
+          products: 1,
+          "user.name": 1,
+          "address.street": 1,
+          "address.city": 1,
+          "address.state": 1,
+          "address.country": 1,
+          "address.zipCode": 1,
+        },
+      },
+    ]);
+
+    const invoiceData = orderData[0];
+    let invoiceDoc = new InvoiceDocument({ size: "A4", margin: 50 });
+
+    const stream = res.writeHead(200, {
+      "Content-Type": "application/pdf",
+      "Content-disposition": `attachment;filename=invoice.pdf`,
+    });
+
+    invoiceDoc.on("data", (chunk) => stream.write(chunk));
+    invoiceDoc.on("end", () => stream.end());
+
+    createInvoice(invoiceDoc, invoiceData);
+
+    invoiceDoc.end();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const updateOrder = async (req, res) => {
   try {
     const id = req.params.id;
@@ -406,13 +510,19 @@ const cancelOrder = async (req, res) => {
 
     await orderData.save();
 
-    res
-      .status(200)
-      .json({
-        status: "Cancelled",
-        id,
-        cancelledDate: orderData.cancelledDate,
+    for (const product of orderData.products) {
+      const productId = product.id;
+
+      await productModel.findByIdAndUpdate(productId, {
+        $inc: { quantity: product.quantity },
       });
+    }
+
+    res.status(200).json({
+      status: "Cancelled",
+      id,
+      cancelledDate: orderData.cancelledDate,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -421,7 +531,7 @@ const cancelOrder = async (req, res) => {
 const deleteOrder = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await productModel.findByIdAndUpdate(id, { active: false });
+    const data = await orderModel.findByIdAndDelete(id);
     res.status(200).json({ data: data });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -433,6 +543,7 @@ module.exports = {
   getOrder,
   getAllUserOrder,
   getAllOrder,
+  generateInvoice,
   updateOrder,
   cancelOrder,
   deleteOrder,

@@ -219,7 +219,10 @@ const getAllBrand = async (req, res) => {
     if (searchQuery) {
       searchQueryAgg.push({
         $match: {
-          title: new RegExp(searchQuery, "i"),
+          title: {
+            $regex: searchQuery,
+            $options: "i",
+          },
         },
       });
     }
@@ -339,7 +342,10 @@ const getSearchedBrand = async (req, res) => {
     if (searchQuery) {
       searchQueryAgg.push({
         $match: {
-          title: new RegExp(searchQuery, "i"),
+          title: {
+            $regex: searchQuery,
+            $options: "i",
+          },
         },
       });
     }

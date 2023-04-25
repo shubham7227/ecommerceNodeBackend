@@ -293,7 +293,10 @@ const getSearchedCategory = async (req, res) => {
     if (searchQuery) {
       searchQueryAgg.push({
         $match: {
-          title: new RegExp(searchQuery, "i"),
+          title: {
+            $regex: searchQuery,
+            $options: "i",
+          },
         },
       });
     }
@@ -332,7 +335,10 @@ const getAllCategory = async (req, res) => {
     if (searchQuery) {
       searchQueryAgg.push({
         $match: {
-          title: new RegExp(searchQuery, "i"),
+          title: {
+            $regex: searchQuery,
+            $options: "i",
+          },
         },
       });
     }
