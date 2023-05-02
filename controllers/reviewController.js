@@ -35,6 +35,7 @@ const addReview = async (req, res) => {
 
     const timeConverted = new Date(newReview.Time * 1000).toISOString();
     const data = {
+      _id: newReview._id,
       Rating: newReview.Rating,
       Time: timeConverted,
       reviewerName: newReview.reviewerName,
