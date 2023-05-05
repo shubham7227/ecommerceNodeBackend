@@ -279,8 +279,10 @@ const getAllUserOrder = async (req, res) => {
   }
 };
 
+//get all orders
 const getAllOrder = async (req, res) => {
   try {
+    
     let sortOrder = req.query.sortOrder || JSON.stringify({ orderDate: -1 });
     const _sortOrder = JSON.parse(sortOrder);
 
