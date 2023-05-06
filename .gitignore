@@ -1,4 +1,5 @@
 blockchain/db/
+blockchain/build/
 
 # Logs
 logs
