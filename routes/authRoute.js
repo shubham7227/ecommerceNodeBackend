@@ -32,11 +32,11 @@ router.get("/getByRole/:role", isAuth, isAdmin, showUserByRole);
 
 router.get("/", isAuth, isAdmin, show);
 
-router.put("/:id", isAuth, isAdmin, updateByAdmin);
-
 router.put("/", isAuth, update);
 
 router.put("/change-password", isAuth, updatePassword);
+
+router.put("/:id", isAuth, isAdmin, updateByAdmin);
 
 router.put("/verify/:token", verifyToken, verifyEmail);
 

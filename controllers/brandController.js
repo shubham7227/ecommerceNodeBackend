@@ -162,6 +162,7 @@ const getBrandProductsAdmin = async (req, res) => {
       {
         $match: {
           brandId: new ObjectId(id),
+          active: true,
         },
       },
       {
