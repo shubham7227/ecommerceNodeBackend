@@ -712,7 +712,11 @@ const updateProduct = async (req, res) => {
       newImageURLs.push(recevData.secure_url);
       fs.unlinkSync(path);
     }
-    newImageURLs.push(...imageURLHighRes);
+    if (imageURLHighRes && Array.isArray(imageURLHighRes)) {
+      newImageURLs.push(...imageURLHighRes);
+    } else if (imageURLHighRes) {
+      newImageURLs.push(imageURLHighRes);
+    }
 
     const toUpdateData = await productModel.findById(id);
 
