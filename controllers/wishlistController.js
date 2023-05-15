@@ -78,7 +78,7 @@ const getAllWishlistUser = async (req, res) => {
 const deleteWishlist = async (req, res) => {
   try {
     const id = req.params.id;
-    await productModel.findByIdAndDelete(id);
+    await wishlistModel.findByIdAndDelete(id);
     res.status(200).json({ id: id });
   } catch (error) {
     res.status(500).json({ message: error.message });
