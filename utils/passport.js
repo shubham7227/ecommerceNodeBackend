@@ -21,9 +21,9 @@ passport.use(
         let userData = await userModel.findOne({ email: email });
 
         if (!userData) {
-          const userId = getNewuserId().userId;
+          // const userId = getNewuserId().userId;
           userData = await userModel.create({
-            _id: userId,
+            // _id: userId,
             name,
             email,
             isVerified: true,

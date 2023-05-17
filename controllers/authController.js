@@ -32,9 +32,9 @@ const signup = async (req, res) => {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hashSync(password, salt, 10);
 
-    const userId = getNewuserId().userId;
+    // const userId = getNewuserId().userId;
     const data = await userModel.create({
-      _id: userId,
+      // _id: userId,
       name,
       email,
       password: hashedPassword,
