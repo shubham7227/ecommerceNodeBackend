@@ -7,7 +7,7 @@ const passport = require("passport");
 require("dotenv").config();
 
 const db = require("./utils/db");
-const blockchain = require("./utils/listenBlockchain");
+// const blockchain = require("./utils/listenBlockchain");
 const passportSetup = require("./utils/passport");
 
 app.use(express());
@@ -26,12 +26,12 @@ app.use(
     secret: "secret",
     resave: false,
     saveUninitialized: true,
-    // cookie: {
-    //   secure: true,
-    //   httpOnly: true,
-    //   sameSite: "none",
-    //   maxAge: 60 * 60 * 24 * 1000,
-    // },
+    cookie: {
+      secure: true,
+      httpOnly: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 24 * 1000,
+    },
   })
 );
 
