@@ -71,6 +71,11 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     const user = await userModel.findOne({ email, active: true });
 
+    if (!user) {
+      res.status(400).json({ message: "Invalid Credentials" });
+      return;
+    }
+
     if (!user.password) {
       res.status(400).json({ message: "Please login using google" });
       return;
@@ -80,7 +85,7 @@ const login = async (req, res) => {
       ? await bcrypt.compare(password, user.password)
       : false;
 
-    if (!user || !validPassword) {
+    if (!validPassword) {
       res.status(400).json({ message: "Invalid Credentials" });
       return;
     }
