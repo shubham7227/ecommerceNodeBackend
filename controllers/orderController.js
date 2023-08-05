@@ -7,6 +7,12 @@ const { createInvoice } = require("../utils/createInvoice");
 const { addNewIssueJira, updateIssueJira } = require("../utils/jira");
 const ObjectId = mongoose.Types.ObjectId;
 
+const statusToJiraTransition = {
+  Processing: "3",
+  Delivered: "2",
+  Cancelled: "4",
+};
+
 const createOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -505,12 +511,6 @@ const updateOrder = async (req, res) => {
     // 4 === Processing => CANCELLED
     // 2 === Processing => Delivered
 
-    const statusToJiraTransition = {
-      Processing: "3",
-      Delivered: "2",
-      Cancelled: "4",
-    };
-
     if (orderData?.jiraIssueKey) {
       await updateIssueJira({
         issueKey: orderData.jiraIssueKey,
@@ -545,6 +545,13 @@ const cancelOrder = async (req, res) => {
 
       await productModel.findByIdAndUpdate(productId, {
         $inc: { quantity: product.quantity },
+      });
+    }
+
+    if (orderData?.jiraIssueKey) {
+      await updateIssueJira({
+        issueKey: orderData.jiraIssueKey,
+        transitionId: statusToJiraTransition.Cancelled,
       });
     }
 
