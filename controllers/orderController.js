@@ -4,6 +4,7 @@ const orderModel = require("../models/orderModel");
 const cartModel = require("../models/cartModel");
 const productModel = require("../models/productModel");
 const { createInvoice } = require("../utils/createInvoice");
+const { addNewIssueJira, updateIssueJira } = require("../utils/jira");
 const ObjectId = mongoose.Types.ObjectId;
 
 const createOrder = async (req, res) => {
@@ -84,6 +85,16 @@ const createOrder = async (req, res) => {
         $inc: { quantity: -product.quantity },
       });
     }
+
+    const jiraIssueKey = await addNewIssueJira({
+      summary: newOrder.orderId,
+      description: JSON.stringify(newOrder),
+    });
+    console.log(jiraIssueKey);
+
+    await orderModel.findByIdAndUpdate(newOrder._id, {
+      jiraIssueKey: jiraIssueKey,
+    });
 
     res.status(200).json({ orderId: newOrder.orderId });
   } catch (error) {
@@ -282,7 +293,6 @@ const getAllUserOrder = async (req, res) => {
 //get all orders
 const getAllOrder = async (req, res) => {
   try {
-    
     let sortOrder = req.query.sortOrder || JSON.stringify({ orderDate: -1 });
     const _sortOrder = JSON.parse(sortOrder);
 
@@ -489,6 +499,24 @@ const updateOrder = async (req, res) => {
     orderData.status = status;
 
     await orderData.save();
+
+    // 3 === PLACED => Processing
+    // 4 === Placed => Cancelled
+    // 4 === Processing => CANCELLED
+    // 2 === Processing => Delivered
+
+    const statusToJiraTransition = {
+      Processing: "3",
+      Delivered: "2",
+      Cancelled: "4",
+    };
+
+    if (orderData?.jiraIssueKey) {
+      await updateIssueJira({
+        issueKey: orderData.jiraIssueKey,
+        transitionId: statusToJiraTransition[status],
+      });
+    }
 
     res.status(200).json({
       status,

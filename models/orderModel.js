@@ -59,6 +59,9 @@ const orderSchema = Schema({
   cancelledDate: {
     type: Date,
   },
+  jiraIssueKey: {
+    type: String,
+  },
   status: {
     type: String,
     enum: ["Processing", "Delivered", "Cancelled", "Placed"],

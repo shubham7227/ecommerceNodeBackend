@@ -7,7 +7,7 @@ const passport = require("passport");
 require("dotenv").config();
 
 const db = require("./utils/db");
-const blockchain = require("./utils/listenBlockchain");
+// const blockchain = require("./utils/listenBlockchain");
 const passportSetup = require("./utils/passport");
 
 app.use(express());
@@ -52,6 +52,7 @@ const paymentRouter = require("./routes/paymentRoute");
 const productRouter = require("./routes/productRoute");
 const reviewRouter = require("./routes/reviewRoute");
 const wishlistRouter = require("./routes/wishlistRoute");
+const jiraRouter = require("./routes/jiraRoute");
 
 app.use("/address", addressRouter);
 app.use("/auth", authRouter);
@@ -64,6 +65,7 @@ app.use("/payment", paymentRouter);
 app.use("/product", productRouter);
 app.use("/review", reviewRouter);
 app.use("/wishlist", wishlistRouter);
+app.use("/jira", jiraRouter);
 
 app.get("/", (req, res) => {
   res.send("GROWCOMERS - Backend is running!!!");
