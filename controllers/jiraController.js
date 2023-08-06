@@ -1,4 +1,5 @@
 const { default: axios } = require("axios");
+const orderModel = require("../models/orderModel");
 
 const username = process.env.JIRA_USERNAME;
 const apiKey = process.env.JIRA_API_KEY;
@@ -44,6 +45,23 @@ const addIssue = async (req, res) => {
       },
     });
     console.log(data.key);
+    res.status(200).json({ data: data });
+  } catch (err) {
+    console.log(err.response.data);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getIssue = async (req, res) => {
+  try {
+    const key = req.params.id;
+
+    const { data } = await JIRA_API.get(`/rest/api/3/issue/${key}`, {
+      headers: {
+        Authorization: auth,
+      },
+    });
+
     res.status(200).json({ data: data });
   } catch (err) {
     console.log(err.response.data);
@@ -127,10 +145,93 @@ const getIssueTransitions = async (req, res) => {
   }
 };
 
+const getIssueEditMeta = async (req, res) => {
+  try {
+    const issueId = req.params.id;
+
+    const { data } = await JIRA_API.get(
+      `/rest/api/3/issue/${issueId}/editmeta`,
+      {
+        headers: {
+          Authorization: auth,
+        },
+      }
+    );
+    res.status(200).json({ data: data });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const handleWebhook = async (req, res) => {
+  try {
+    const { timestamp, webhookEvent, issue, changelog } = req.body;
+
+    // jira:issue_created
+    // jira:issue_updated
+    // jira:issue_deleted
+
+    // 10009 ===> Processing
+    // 10010 ===> Cancelled
+    // 10004 ===> Delivered
+    // 10003 ===> Placed
+
+    const statusIdMapping = {
+      10003: "Placed",
+      10009: "Processing",
+      10004: "Delivered",
+      10010: "Cancelled",
+    };
+
+    const issueKey = issue.key;
+    const statusId = issue.fields.status.id;
+    const newStatus = statusIdMapping[statusId];
+
+    if (
+      webhookEvent === "jira:issue_updated" &&
+      changelog &&
+      changelog.items.find((entry) => entry.fieldId === "status")
+    ) {
+      const orderData = await orderModel.findOne({ jiraIssueKey: issueKey });
+
+      if (orderData) {
+        if (orderData.status !== newStatus) {
+          const isoTimestamp = new Date(timestamp).toISOString();
+
+          await orderModel.findByIdAndUpdate(orderData._id, {
+            status: newStatus,
+            deliveredDate: newStatus === "Delivered" ? isoTimestamp : undefined,
+            cancelledDate: newStatus === "Cancelled" ? isoTimestamp : undefined,
+          });
+          console.log(
+            `${issueKey} data sucessfully updated in database by jira webhook event`
+          );
+        } else {
+          console.log("Status is same");
+        }
+      } else {
+        console.log("Order not found");
+      }
+    } else {
+      console.log(`${webhookEvent} event received`);
+      console.log(changelog);
+    }
+
+    res.status(200).json({ message: "success" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   addIssue,
+  getIssue,
   getIssueTypes,
   getIssueFields,
   getIssueTransitions,
+  getIssueEditMeta,
   updateIssue,
+  handleWebhook,
 };

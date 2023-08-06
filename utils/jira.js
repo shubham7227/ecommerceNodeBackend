@@ -68,7 +68,6 @@ const updateIssueJira = async ({ issueKey, transitionId }) => {
     return true;
   } catch (err) {
     console.log(err.response.data);
-    // throw err.message;
   }
 };
 
